@@ -22,14 +22,14 @@ export const GROUP_ID = "g-work";
 
 const demoGroup: Group = {
   id: GROUP_ID,
-  name: "Первые 30 дней на новой работе",
+  name: "Первые 30 дней в университете",
   description: "Небольшая группа для комфортной адаптации в первые недели.",
   inviteCode: DEMO_INVITE_CODE,
   duration: DEFAULT_DURATION,
   currentDay: 7,
   curatorId: CURATOR_ID,
   weeklyGoal: {
-    title: "Познакомиться с командой и понять основные процессы.",
+    title: "Познакомиться с сокурсниками и понять основные правила учёбы.",
     target: 4,
     done: 3,
   },
@@ -43,7 +43,7 @@ const demoUsers: User[] = [
   { id: "u-dmitry", name: "Дмитрий", role: "participant", avatar: "🧔", groupId: GROUP_ID },
 ];
 
-/** Задания первой недели программы «Первые 30 дней на новой работе». */
+/** Задания первой недели программы «Первые 30 дней в университете». */
 const demoTasks: Task[] = [
   {
     id: "t-1",
@@ -57,9 +57,9 @@ const demoTasks: Task[] = [
     id: "t-2",
     groupId: GROUP_ID,
     day: 2,
-    title: "Познакомиться с тремя коллегами",
+    title: "Познакомиться с тремя сокурсниками",
     description:
-      "Найди трёх человек из команды и коротко поговори с ними: чем занимаются и как вы будете пересекаться в работе.",
+      "Найди трёх человек из группы и коротко поговори с ними: что у вас по учёбе и как вы будете пересекаться в университете.",
   },
   {
     id: "t-3",
@@ -91,7 +91,7 @@ const demoTasks: Task[] = [
     day: 6,
     title: "Попросить обратную связь",
     description:
-      "Попроси коллегу или руководителя коротко сказать, что уже идёт хорошо и на что стоит обратить внимание.",
+      "Попроси преподавателя или тьютора коротко сказать, что уже идёт хорошо и на что стоит обратить внимание.",
   },
   {
     id: "t-7",
@@ -199,7 +199,7 @@ function buildMessages(now: Date): Message[] {
       id: "m-1",
       groupId: GROUP_ID,
       userId: CURATOR_ID,
-      text: "Всем привет! На этой неделе фокус простой — знакомимся с командой и разбираемся в процессах.",
+      text: "Всем привет! На этой неделе фокус простой — знакомимся с сокурсниками и разбираемся в правилах учёбы.",
       createdAt: minutesAgo(320),
       reactions: { "❤️": 3, "👍": 2 },
     },
@@ -207,7 +207,7 @@ function buildMessages(now: Date): Message[] {
       id: "m-2",
       groupId: GROUP_ID,
       userId: DEMO_PARTICIPANT_ID,
-      text: "Сегодня наконец разобралась с процессом оформления заявок.",
+      text: "Сегодня наконец разобралась с тем, как оформляются учебные заявления и документы.",
       createdAt: minutesAgo(190),
       reactions: { "👏": 2, "🔥": 1 },
     },
@@ -215,7 +215,7 @@ function buildMessages(now: Date): Message[] {
       id: "m-3",
       groupId: GROUP_ID,
       userId: "u-maxim",
-      text: "Познакомился ещё с двумя коллегами. Уже становится намного проще.",
+      text: "Познакомился ещё с двумя сокурсниками. Уже становится намного проще.",
       createdAt: minutesAgo(120),
       reactions: { "👍": 2 },
     },
@@ -231,7 +231,7 @@ function buildMessages(now: Date): Message[] {
       id: "m-5",
       groupId: GROUP_ID,
       userId: "u-dmitry",
-      text: "Получил первую обратную связь от команды 👍",
+      text: "Получил первую обратную связь от преподавателя 👍",
       createdAt: minutesAgo(35),
       reactions: { "🔥": 2, "👏": 1 },
     },
@@ -269,7 +269,7 @@ function buildDirectMessages(now: Date): DirectMessage[] {
       groupId: GROUP_ID,
       fromUserId: DEMO_PARTICIPANT_ID,
       toUserId: CURATOR_ID,
-      text: "Спасибо! Как раз хотела уточнить про оформление заявок, но в общем чате стеснялась.",
+      text: "Спасибо! Как раз хотела уточнить про оформление учебных документов, но в общем чате стеснялась.",
       createdAt: minutesAgo(210),
     },
   ];

@@ -39,6 +39,10 @@ export function joinGroup(
     return { error: "Введите имя — минимум 2 символа." };
   }
 
+  if (!/^[A-Za-zА-Яа-яЁё]+$/.test(name)) {
+    return { error: "Имя может содержать только буквы." };
+  }
+
   if (!isValidInviteCode(state, input.code)) {
     return { error: `Код группы не найден. Для демонстрации используйте ${state.group.inviteCode}.` };
   }
@@ -104,7 +108,7 @@ export function updateWeeklyGoal(state: AppState, done: number): AppState {
 }
 
 export const defaultGroupDraft: CreateGroupInput = {
-  name: "Первые 30 дней на новой работе",
+  name: "Первые 30 дней в университете",
   description: "Небольшая группа для комфортной адаптации в первые недели.",
   duration: DEFAULT_DURATION,
 };

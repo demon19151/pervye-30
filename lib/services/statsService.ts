@@ -9,7 +9,7 @@ import type {
 } from "../types";
 import { getCheckIns, getParticipantDay } from "./checkInService";
 import { getParticipants } from "./groupService";
-import { getActiveSignals } from "./supportService";
+import { getActiveSignals, getSignalsForUser } from "./supportService";
 
 /** Сколько последних дней учитывается в среднем настроении и энергии. */
 export const SCORE_WINDOW = 3;
@@ -137,13 +137,23 @@ type WarningInput = {
 function buildWarnings(state: AppState, userId: string, input: WarningInput): Warning[] {
   const warnings: Warning[] = [];
 
+  // Если куратор уже «снял» предупреждение после сообщения,
+  // то соответствующий resolved-сигнал существует — такие предупреждения
+  // не показываем в блоке «Требуют внимания».
+  const hasResolvedMissedTasks = getSignalsForUser(state, userId).some(
+    (s) => s.type === "missed_tasks" && s.resolved,
+  );
+  const hasResolvedLowMood = getSignalsForUser(state, userId).some(
+    (s) => s.type === "low_mood" && s.resolved,
+  );
+
   // Условие A — несколько дней подряд без отметки о выполнении.
-  if (input.missedStreak >= MISSED_STREAK_THRESHOLD) {
+  if (!hasResolvedMissedTasks && input.missedStreak >= MISSED_STREAK_THRESHOLD) {
     warnings.push({
       reason: "missed_tasks",
       label: `Не отмечает задания ${input.missedStreak} ${input.missedStreak > 4 ? "дней" : "дня"} подряд`,
     });
-  } else if (input.missedDays >= MISSED_TOTAL_THRESHOLD) {
+  } else if (!hasResolvedMissedTasks && input.missedDays >= MISSED_TOTAL_THRESHOLD) {
     warnings.push({ reason: "missed_tasks", label: "Несколько пропущенных дней" });
   }
 
@@ -151,7 +161,7 @@ function buildWarnings(state: AppState, userId: string, input: WarningInput): Wa
   const lowMood = input.mood > 0 && input.mood <= LOW_SCORE_THRESHOLD;
   const lowEnergy = input.energy > 0 && input.energy <= LOW_SCORE_THRESHOLD;
 
-  if (lowMood || lowEnergy) {
+  if (!hasResolvedLowMood && (lowMood || lowEnergy)) {
     warnings.push({
       reason: "low_mood",
       label: lowMood && lowEnergy

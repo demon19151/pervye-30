@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { MessageParticipantModal } from "@/components/message-participant-modal";
 import { useToast } from "@/components/ui/toast";
 import { addDirectMessage } from "@/lib/services/directMessageService";
-import { resolveSignalsForUser } from "@/lib/services/supportService";
+import { resolveAttentionForUser } from "@/lib/services/supportService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { User } from "@/lib/types";
 import { toDative } from "@/lib/utils";
@@ -18,7 +17,6 @@ import { toDative } from "@/lib/utils";
 export function useWriteToParticipant() {
   const { currentUser, update } = useAppStore();
   const { toast } = useToast();
-  const router = useRouter();
   const [target, setTarget] = useState<User | null>(null);
 
   const submit = (text: string) => {
@@ -29,12 +27,11 @@ export function useWriteToParticipant() {
     update((current) => {
       const result = addDirectMessage(current, currentUser.id, recipient.id, text);
       const next = "error" in result ? current : result.state;
-      return resolveSignalsForUser(next, recipient.id);
+      return resolveAttentionForUser(next, recipient.id);
     });
 
     toast(`Сообщение отправлено ${toDative(recipient.name)}`);
     setTarget(null);
-    router.push(`/curator/messages?with=${recipient.id}`);
   };
 
   const modal = (

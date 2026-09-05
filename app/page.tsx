@@ -75,7 +75,7 @@ export default function LandingPage() {
             <div className="max-w-2xl">
               <Badge tone="accent">
                 <Sparkles className="size-3.5" />
-                Первые 30 дней на новой работе
+                Первые 30 дней в университете
               </Badge>
 
               <h1 className="mt-6 text-[2.75rem] leading-[1.05] font-semibold sm:text-6xl">
@@ -114,11 +114,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Как это работает */}
+        {/* Как это устроено */}
         <section className="border-t border-line/70 bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <div className="max-w-xl">
-              <h2 className="text-3xl font-semibold sm:text-4xl">Как это работает</h2>
+              <h2 className="text-3xl font-semibold sm:text-4xl">Как это устроено</h2>
               <p className="mt-3 text-[17px] text-muted">
                 Три простых действия каждый день — и первый месяц перестаёт быть испытанием
                 в одиночку.

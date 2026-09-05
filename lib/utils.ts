@@ -1,8 +1,40 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+export type ClassValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | ClassValue[]
+  | Record<string, unknown>;
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  // Локальная реализация. Для MVP достаточно “склейки” классов и поддержки
+  // формата { 'class': boolean }. tailwind-merge/clsx оставляем в зависимостях
+  // на будущее, но не используем здесь, чтобы не ловить проблемы RSC/webpack.
+  const parts: string[] = [];
+
+  const walk = (value: ClassValue): void => {
+    if (!value) return;
+
+    if (typeof value === "string" || typeof value === "number") {
+      parts.push(String(value));
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => walk(item));
+      return;
+    }
+
+    if (typeof value === "object") {
+      for (const [key, enabled] of Object.entries(value)) {
+        if (enabled) parts.push(key);
+      }
+    }
+  };
+
+  inputs.forEach((item) => walk(item));
+  return parts.join(" ");
 }
 
 /** «4» вместо «4.0», но «4.3» там, где десятая доля важна. */

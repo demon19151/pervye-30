@@ -184,9 +184,9 @@ function ParticipantDashboard() {
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
-            <Link href="/group?tab=direct">
+            <Link href="/direct">
               <Button variant="secondary" fullWidth>
-                Написать куратору
+                Сообщения с куратором
                 <ArrowRight className="size-4" />
               </Button>
             </Link>

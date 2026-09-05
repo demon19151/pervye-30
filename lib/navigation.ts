@@ -1,5 +1,6 @@
 import {
   CalendarCheck,
+  CalendarDays,
   LayoutDashboard,
   ListChecks,
   Megaphone,
@@ -24,7 +25,9 @@ export type NavItem = {
 
 export const participantNav: NavItem[] = [
   { label: "Сегодня", href: "/participant", icon: CalendarCheck, mobile: true },
-  { label: "Группа", href: "/group", icon: Users, mobile: true },
+  { label: "Сообщения", href: "/direct", icon: MessagesSquare, mobile: true },
+  { label: "Группа", href: "/group", icon: Users },
+  { label: "Мероприятия", href: "/events", icon: CalendarDays },
   { label: "Прогресс", href: "/progress", icon: TrendingUp, mobile: true },
   { label: "Итоги", href: "/summary", icon: Trophy },
   { label: "Профиль", href: "/profile", icon: UserRound, mobile: true },
@@ -34,8 +37,9 @@ export const curatorNav: NavItem[] = [
   { label: "Обзор", href: "/curator", icon: LayoutDashboard, mobile: true },
   { label: "Участники", href: "/curator/participants", icon: Users, mobile: true },
   { label: "Сообщения", href: "/curator/messages", icon: MessagesSquare, mobile: true },
+  { label: "Мероприятия", href: "/events", icon: CalendarDays, mobile: true },
   { label: "Задания", href: "/curator/tasks", icon: ListChecks },
-  { label: "Объявления", href: "/curator/announcements", icon: Megaphone, mobile: true },
+  { label: "Объявления", href: "/curator/announcements", icon: Megaphone },
   { label: "Настройки", href: "/curator/settings", icon: Settings },
 ];
 

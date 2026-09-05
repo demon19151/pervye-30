@@ -34,6 +34,11 @@ const roles: { value: UserRole; label: string; hint: string; icon: typeof UserRo
 
 const demoNames = ["Анна", "Максим", "Ирина", "Дмитрий"];
 
+function sanitizeLettersOnly(value: string) {
+  // Строго буквы (кириллица/латиница), без цифр и прочих символов.
+  return value.replace(/[^A-Za-zА-Яа-яЁё]/g, "");
+}
+
 export default function JoinPage() {
   const { state, ready, update } = useAppStore();
   const { toast } = useToast();
@@ -49,8 +54,14 @@ export default function JoinPage() {
     event.preventDefault();
     if (!state) return;
 
+    const cleaned = sanitizeLettersOnly(name);
+    if (cleaned.length < 2) {
+      setError("Введите имя — минимум 2 буквы.");
+      return;
+    }
+
     setSubmitting(true);
-    const result = joinGroup(state, { name, code, role });
+    const result = joinGroup(state, { name: cleaned, code, role });
 
     if ("error" in result) {
       setError(result.error);
@@ -79,7 +90,7 @@ export default function JoinPage() {
             <Input
               id="join-name"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => setName(sanitizeLettersOnly(event.target.value))}
               placeholder="Как вас зовут?"
               autoComplete="name"
               maxLength={40}
@@ -94,7 +105,7 @@ export default function JoinPage() {
                 type="button"
                 onClick={() => setName(demoName)}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                    "cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                   name === demoName
                     ? "bg-accent-soft text-accent-strong"
                     : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
@@ -114,7 +125,7 @@ export default function JoinPage() {
                 <button
                   type="button"
                   onClick={() => setCode(DEMO_INVITE_CODE)}
-                  className="font-mono font-semibold tracking-wider text-accent transition-colors hover:text-accent-strong"
+                  className="cursor-pointer font-mono font-semibold tracking-wider text-accent transition-colors hover:text-accent-strong"
                 >
                   {DEMO_INVITE_CODE}
                 </button>
@@ -144,7 +155,7 @@ export default function JoinPage() {
                     onClick={() => setRole(option.value)}
                     aria-pressed={active}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-2xl p-4 text-left ring-1 ring-inset transition-all duration-200",
+                      "cursor-pointer flex flex-col items-start gap-1 rounded-2xl p-4 text-left ring-1 ring-inset transition-all duration-200",
                       active
                         ? "bg-accent-soft ring-2 ring-accent"
                         : "bg-surface-muted ring-line hover:bg-accent-soft/60 hover:ring-accent-ring",

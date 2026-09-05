@@ -130,7 +130,7 @@ export default function CreateGroupPage() {
               id="group-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Первые 30 дней на новой работе"
+              placeholder="Первые 30 дней в университете"
               maxLength={80}
               required
             />

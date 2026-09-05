@@ -109,6 +109,10 @@
     cursor: not-allowed;
   }
 
+  button {
+    cursor: pointer;
+  }
+
   h1,
   h2,
   h3,

@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { addAnnouncement } from "@/lib/services/announcementService";
 import { getAllParticipantStats, getGroupStats } from "@/lib/services/statsService";
-import { resolveSignalsForUser } from "@/lib/services/supportService";
 import { addTask, getNextFreeDay, type CreateTaskInput } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { ParticipantStats } from "@/lib/types";
@@ -83,11 +82,6 @@ function CuratorOverview() {
     toast("Объявление отправлено группе");
   };
 
-  const handleResolve = (item: ParticipantStats) => {
-    update((current) => resolveSignalsForUser(current, item.user.id));
-    toast(`Сигнал по ${toDative(item.user.name)} отмечен как просмотренный`, "info");
-  };
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -135,7 +129,7 @@ function CuratorOverview() {
         />
       </div>
 
-      <SupportAlert flagged={flagged} onWrite={(item) => write.openFor(item.user)} onResolve={handleResolve} />
+      <SupportAlert flagged={flagged} onWrite={(item) => write.openFor(item.user)} />
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">

@@ -18,11 +18,9 @@ import { toDative } from "@/lib/utils";
 export function SupportAlert({
   flagged,
   onWrite,
-  onResolve,
 }: {
   flagged: ParticipantStats[];
   onWrite: (stats: ParticipantStats) => void;
-  onResolve: (stats: ParticipantStats) => void;
 }) {
   return (
     <Card tone={flagged.length > 0 ? "warning" : "default"} className="p-5 sm:p-6">
@@ -72,10 +70,6 @@ export function SupportAlert({
                     <Button size="sm" onClick={() => onWrite(stats)}>
                       <MessageCircle className="size-4" />
                       Написать {toDative(stats.user.name)}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => onResolve(stats)}>
-                      <Check className="size-4" />
-                      Отметить как просмотренное
                     </Button>
                   </div>
                 </div>

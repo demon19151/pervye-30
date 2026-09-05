@@ -34,10 +34,9 @@ export default function GroupPage() {
 
 function GroupOverview() {
   const { state, currentUser } = useAppStore();
-  const searchParams = useSearchParams();
-  const [tab, setTab] = useState<FeedTab>(
-    searchParams.get("tab") === "direct" ? "direct" : "group",
-  );
+  // Вкладка личных сообщений вынесена в отдельный маршрут `/direct`.
+  // В этой странице всегда показываем только общий чат группы.
+  const tab: FeedTab = "group";
 
   if (!state || !currentUser) return null;
 
@@ -61,28 +60,9 @@ function GroupOverview() {
         }
       />
 
-      <FeedTabs
-        value={tab}
-        onChange={setTab}
-        directLabel={isCurator ? "Личные сообщения" : "С куратором"}
-      />
+      {/* Личные сообщения доступны отдельной вкладкой `/direct`. */}
 
-      {tab === "direct" ? (
-        isCurator ? (
-          <DirectInbox initialUserId={searchParams.get("with") ?? undefined} />
-        ) : curator ? (
-          <DirectThread
-            counterpart={curator}
-            title={`Переписка с ${curator.name}`}
-            description="Личные сообщения с куратором. Группа их не видит."
-          />
-        ) : (
-          <Card className="p-6">
-            <p className="text-sm text-muted">Куратор группы ещё не назначен.</p>
-          </Card>
-        )
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-5">
+      <div className="grid gap-5 lg:grid-cols-5">
           <div className="space-y-5 lg:col-span-3">
             <Card className="p-5 sm:p-6">
               <CardHeader
@@ -168,7 +148,6 @@ function GroupOverview() {
             />
           </div>
         </div>
-      )}
     </div>
   );
 }

@@ -1,0 +1,154 @@
+/**
+ * Доменная модель «Первые 30».
+ *
+ * Слой типов не зависит от способа хранения: сейчас данные лежат в localStorage,
+ * позже те же структуры можно отдавать из Supabase/PostgreSQL без правок UI.
+ */
+
+export type UserRole = "participant" | "curator";
+
+export type User = {
+  id: string;
+  name: string;
+  role: UserRole;
+  /** Эмодзи-аватар: для MVP этого достаточно, поле совместимо с URL картинки. */
+  avatar?: string;
+  groupId: string;
+};
+
+export type Group = {
+  id: string;
+  name: string;
+  description: string;
+  inviteCode: string;
+  /** Длительность программы в днях. */
+  duration: number;
+  /** Текущий день программы (1..duration). */
+  currentDay: number;
+  curatorId: string;
+  weeklyGoal?: WeeklyGoal;
+};
+
+export type WeeklyGoal = {
+  title: string;
+  target: number;
+  done: number;
+};
+
+export type Task = {
+  id: string;
+  groupId: string;
+  day: number;
+  title: string;
+  description: string;
+};
+
+export type DailyCheckIn = {
+  id: string;
+  userId: string;
+  day: number;
+  completed: boolean;
+  /** Настроение 1..5, 0 — ещё не указано. */
+  mood: number;
+  /** Энергия 1..5, 0 — ещё не указано. */
+  energy: number;
+  note?: string;
+  updatedAt: string;
+};
+
+export type Message = {
+  id: string;
+  groupId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
+  /** Эмодзи → количество. */
+  reactions: Record<string, number>;
+  /** Реакции текущего пользователя, чтобы их можно было снять. */
+  myReactions?: string[];
+};
+
+export type SupportSignalType = "manual" | "low_mood" | "missed_tasks";
+
+export type SupportSignal = {
+  id: string;
+  userId: string;
+  type: SupportSignalType;
+  message?: string;
+  createdAt: string;
+  resolved: boolean;
+};
+
+export type Announcement = {
+  id: string;
+  groupId: string;
+  curatorId: string;
+  text: string;
+  createdAt: string;
+};
+
+export type Achievement = {
+  id: string;
+  title: string;
+  unlocked: boolean;
+};
+
+/** Единый снимок состояния приложения — то, что кладётся в localStorage. */
+export type AppState = {
+  version: number;
+  group: Group;
+  users: User[];
+  tasks: Task[];
+  checkIns: DailyCheckIn[];
+  messages: Message[];
+  signals: SupportSignal[];
+  announcements: Announcement[];
+  /** Кто сейчас в системе. null — не авторизован. */
+  session: Session | null;
+};
+
+export type Session = {
+  userId: string;
+  role: UserRole;
+};
+
+/** Производные метрики участника — считаются сервисами, не в UI. */
+export type ParticipantStats = {
+  user: User;
+  /** Выполнение программы к текущему дню, 0..100. */
+  progress: number;
+  currentDay: number;
+  /** Среднее настроение за последние дни, 0 — нет данных. */
+  mood: number;
+  energy: number;
+  /** Прошедшие дни без отметки о выполнении. */
+  missedDays: number;
+  completedTasks: number;
+  activeDays: number;
+  /** Текущая серия выполненных дней подряд. */
+  streak: number;
+  activeToday: boolean;
+  status: ParticipantStatus;
+  warnings: Warning[];
+};
+
+export type ParticipantStatus = "active" | "missed" | "needs_support";
+
+export type WarningReason = "missed_tasks" | "low_mood" | "manual";
+
+export type Warning = {
+  reason: WarningReason;
+  label: string;
+};
+
+export type SummaryReport = {
+  user: User;
+  completedTasks: number;
+  activeDays: number;
+  /** Изменение среднего настроения между началом и концом программы. */
+  moodDelta: number;
+  achievements: Achievement[];
+  curatorNote: string;
+  /** true, если программа ещё не завершена и показывается предпросмотр. */
+  preview: boolean;
+};

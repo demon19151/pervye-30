@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/*
+ * Дизайн-токены «Первые 30».
+ * Спокойный светлый интерфейс: фиолетовый акцент, зелёный для успеха,
+ * оранжевый — только для предупреждений.
+ */
+@theme {
+  --color-background: #f5f5fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fafaff;
+  --color-foreground: #151426;
+  --color-muted: #6b6885;
+  --color-subtle: #9c99ae;
+  --color-line: #e9e7f3;
+
+  --color-accent: #6d55f5;
+  --color-accent-strong: #5a41e0;
+  --color-accent-soft: #efebfe;
+  --color-accent-ring: #cfc4fd;
+
+  --color-success: #14a05a;
+  --color-success-strong: #0f8a4d;
+  --color-success-soft: #e6f7ee;
+
+  /* Жёлтый — «есть пропуск», оранжевый — «может понадобиться поддержка». */
+  --color-caution: #b5860b;
+  --color-caution-soft: #fdf7e4;
+
+  --color-warning: #d9822b;
+  --color-warning-soft: #fdf2e5;
+
+  --color-danger: #d9422b;
+  --color-danger-soft: #fdecea;
+
+  --radius-card: 1.25rem;
+  --radius-panel: 1.75rem;
+
+  --shadow-soft: 0 1px 2px rgba(21, 20, 38, 0.04), 0 10px 30px -18px rgba(21, 20, 38, 0.16);
+  --shadow-raised: 0 2px 4px rgba(21, 20, 38, 0.04), 0 18px 40px -20px rgba(21, 20, 38, 0.22);
+  --shadow-accent: 0 10px 26px -12px rgba(109, 85, 245, 0.55);
+
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+
+  --animate-rise: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade: fade 0.24s ease-out;
+  --animate-pop: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Плавный фоновый акцент для лендинга — мягкое пятно, а не агрессивный градиент. */
+@utility hero-glow {
+  background:
+    radial-gradient(60rem 32rem at 18% -8%, rgba(109, 85, 245, 0.12), transparent 60%),
+    radial-gradient(44rem 26rem at 88% 4%, rgba(20, 160, 90, 0.08), transparent 62%);
+}

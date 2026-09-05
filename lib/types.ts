@@ -68,6 +68,16 @@ export type Message = {
   myReactions?: string[];
 };
 
+/** Личная переписка куратора и участника — не попадает в общую ленту группы. */
+export type DirectMessage = {
+  id: string;
+  groupId: string;
+  fromUserId: string;
+  toUserId: string;
+  text: string;
+  createdAt: string;
+};
+
 export type SupportSignalType = "manual" | "low_mood" | "missed_tasks";
 
 export type SupportSignal = {
@@ -101,6 +111,7 @@ export type AppState = {
   tasks: Task[];
   checkIns: DailyCheckIn[];
   messages: Message[];
+  directMessages: DirectMessage[];
   signals: SupportSignal[];
   announcements: Announcement[];
   /** Кто сейчас в системе. null — не авторизован. */

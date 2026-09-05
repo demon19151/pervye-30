@@ -177,12 +177,20 @@ function ParticipantDashboard() {
 
           <GroupFeed limit={4} description="Последние сообщения твоей группы." />
 
-          <Link href="/group">
-            <Button variant="outline" fullWidth>
-              Открыть страницу группы
-              <ArrowRight className="size-4" />
-            </Button>
-          </Link>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Link href="/group">
+              <Button variant="outline" fullWidth>
+                Лента группы
+                <ArrowRight className="size-4" />
+              </Button>
+            </Link>
+            <Link href="/group?tab=direct">
+              <Button variant="secondary" fullWidth>
+                Написать куратору
+                <ArrowRight className="size-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

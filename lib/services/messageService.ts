@@ -58,15 +58,3 @@ export function toggleReaction(state: AppState, messageId: string, emoji: string
   };
 }
 
-/** Личное обращение куратора к участнику — публикуется в общей ленте как упоминание. */
-export function addDirectMessage(
-  state: AppState,
-  curatorId: string,
-  participantName: string,
-  text: string,
-): { state: AppState } | { error: string } {
-  const value = text.trim();
-  if (!value) return { error: "Сообщение не может быть пустым." };
-
-  return addMessage(state, curatorId, `${participantName}, ${value}`);
-}

@@ -2,6 +2,7 @@ import type {
   Announcement,
   AppState,
   DailyCheckIn,
+  DirectMessage,
   Group,
   Message,
   SupportSignal,
@@ -250,6 +251,30 @@ function buildSignals(now: Date): SupportSignal[] {
   ];
 }
 
+function buildDirectMessages(now: Date): DirectMessage[] {
+  const minutesAgo = (minutes: number) =>
+    new Date(now.getTime() - minutes * 60_000).toISOString();
+
+  return [
+    {
+      id: "dm-1",
+      groupId: GROUP_ID,
+      fromUserId: CURATOR_ID,
+      toUserId: DEMO_PARTICIPANT_ID,
+      text: "Анна, если что-то будет непонятно — пиши сюда. Это только между нами, группа не увидит.",
+      createdAt: minutesAgo(250),
+    },
+    {
+      id: "dm-2",
+      groupId: GROUP_ID,
+      fromUserId: DEMO_PARTICIPANT_ID,
+      toUserId: CURATOR_ID,
+      text: "Спасибо! Как раз хотела уточнить про оформление заявок, но в общем чате стеснялась.",
+      createdAt: minutesAgo(210),
+    },
+  ];
+}
+
 function buildAnnouncements(now: Date): Announcement[] {
   return [
     {
@@ -274,7 +299,7 @@ export function curatorSummaryNote(feminine: boolean): string {
   return `Ты хорошо ${feminine ? "вошла" : "вошёл"} в ритм команды. Особенно заметно, как изменилось твоё понимание процессов за последний месяц.`;
 }
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 /** Собирает полный демонстрационный снимок состояния. */
 export function createInitialState(now: Date = new Date()): AppState {
@@ -285,6 +310,7 @@ export function createInitialState(now: Date = new Date()): AppState {
     tasks: demoTasks.map((task) => ({ ...task })),
     checkIns: buildCheckIns(now),
     messages: buildMessages(now),
+    directMessages: buildDirectMessages(now),
     signals: buildSignals(now),
     announcements: buildAnnouncements(now),
     session: null,

@@ -36,7 +36,7 @@ export function MessageParticipantModal({
       open={open}
       onClose={onClose}
       title={`Написать ${toDative(participantName)}`}
-      description="Сообщение появится в ленте группы с обращением по имени."
+      description="Сообщение придёт только этому участнику — в личной переписке, не в общей ленте."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -61,7 +61,7 @@ export function MessageParticipantModal({
         </Field>
 
         <p className="text-[13px] text-muted">
-          Начнётся с обращения: <span className="font-medium">{participantName}, …</span>
+          {participantName} увидит это во вкладке «С куратором».
         </p>
 
         <div className="flex flex-wrap gap-1.5">

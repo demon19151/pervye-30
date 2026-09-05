@@ -1,35 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { MessageParticipantModal } from "@/components/message-participant-modal";
 import { useToast } from "@/components/ui/toast";
-import { addDirectMessage } from "@/lib/services/messageService";
+import { addDirectMessage } from "@/lib/services/directMessageService";
 import { resolveSignalsForUser } from "@/lib/services/supportService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { User } from "@/lib/types";
 import { toDative } from "@/lib/utils";
 
 /**
- * Сообщение куратора конкретному участнику.
- * Отправка одновременно закрывает сигнал поддержки — куратор уже отреагировал.
+ * Личное сообщение куратора участнику.
+ * Уходит в приватную переписку и закрывает сигнал поддержки.
  */
 export function useWriteToParticipant() {
   const { currentUser, update } = useAppStore();
   const { toast } = useToast();
+  const router = useRouter();
   const [target, setTarget] = useState<User | null>(null);
 
   const submit = (text: string) => {
     if (!currentUser || !target) return;
 
+    const recipient = target;
+
     update((current) => {
-      const result = addDirectMessage(current, currentUser.id, target.name, text);
+      const result = addDirectMessage(current, currentUser.id, recipient.id, text);
       const next = "error" in result ? current : result.state;
-      return resolveSignalsForUser(next, target.id);
+      return resolveSignalsForUser(next, recipient.id);
     });
 
-    toast(`Сообщение отправлено ${toDative(target.name)}`);
+    toast(`Сообщение отправлено ${toDative(recipient.name)}`);
     setTarget(null);
+    router.push(`/curator/messages?with=${recipient.id}`);
   };
 
   const modal = (

@@ -33,7 +33,8 @@ export const participantNav: NavItem[] = [
 export const curatorNav: NavItem[] = [
   { label: "Обзор", href: "/curator", icon: LayoutDashboard, mobile: true },
   { label: "Участники", href: "/curator/participants", icon: Users, mobile: true },
-  { label: "Задания", href: "/curator/tasks", icon: ListChecks, mobile: true },
+  { label: "Сообщения", href: "/curator/messages", icon: MessagesSquare, mobile: true },
+  { label: "Задания", href: "/curator/tasks", icon: ListChecks },
   { label: "Объявления", href: "/curator/announcements", icon: Megaphone, mobile: true },
   { label: "Настройки", href: "/curator/settings", icon: Settings },
 ];

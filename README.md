@@ -63,7 +63,7 @@ npm run start
 10. Панель куратора: таблица участников — Анна активна, у Максима пропуск, Ирине нужна
     поддержка, Дмитрий активен.
 11. Блок **«Требуют внимания»**: «Ирина — участнику может понадобиться поддержка» →
-    **Написать Ирине**.
+    Куратор видит, что Ирине может понадобиться поддержка (в этом MVP личные переписки отключены).
 12. Итог: **Первые 30 = задание + состояние + группа + куратор.**
 
 ---
@@ -76,13 +76,12 @@ npm run start
 | `/create-group` | Создание группы и выдача кода приглашения |
 | `/join` | Вход по коду с выбором роли |
 | `/participant` | Дашборд участника: задание дня, чек-ин, прогресс, лента группы |
-| `/group` | Страница группы: общий прогресс, цель недели, участники, лента и вкладка личных сообщений с куратором |
+| `/group` | Страница группы: общий прогресс, цель недели, участники и лента |
 | `/events` | Мероприятия из ВК: [ИРИТ-РТФ](https://vk.ru/iot_irit_2026) и [Спорт УрФУ](https://vk.ru/sporturfu) |
 | `/progress` | Личный прогресс: карта 30 дней, статистика, заметки |
 | `/summary` | Итоги программы: статистика, достижения, слова куратора, план дальше |
 | `/profile` | Профиль участника и переключение демо-режима |
 | `/curator` | Панель куратора: статистика, «Требуют внимания», таблица участников |
-| `/curator/messages` | Личные переписки с участниками |
 | `/curator/participants` | Детали по каждому участнику: чек-ины, заметки, сигналы |
 | `/curator/tasks` | Программа заданий и форма «Новое задание» |
 | `/curator/announcements` | Объявления группе |
@@ -129,9 +128,9 @@ lib/
 ### Ключевые компоненты
 
 `ProgressBar`, `ProgressRing`, `TaskCard`, `CheckInCard`, `MoodSelector`, `EnergySelector`,
-`MessageCard`, `GroupFeed`, `ParticipantCard`, `ParticipantTable`, `SupportAlert`,
+`MessageCard`, `ParticipantCard`, `ParticipantTable`, `SupportAlert`,
 `SupportRequestCard`, `StatCard`, `InviteCodeCard`, `CreateTaskModal`, `AnnouncementModal`,
-`SupportSignalModal`, `MessageParticipantModal`, `BottomNavigation`, `Sidebar`, `AppShell`.
+`SupportSignalModal`, `BottomNavigation`, `Sidebar`, `AppShell`.
 
 ---
 

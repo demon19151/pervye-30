@@ -1,13 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { CalendarDays, ListChecks, Target, TrendingUp, Users } from "lucide-react";
 
-import { DirectInbox } from "@/components/direct-inbox";
-import { DirectThread } from "@/components/direct-thread";
-import { FeedTabs, type FeedTab } from "@/components/feed-tabs";
-import { GroupFeed } from "@/components/group-feed";
 import { InviteCodeCard } from "@/components/invite-code-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -34,9 +29,6 @@ export default function GroupPage() {
 
 function GroupOverview() {
   const { state, currentUser } = useAppStore();
-  // Вкладка личных сообщений вынесена в отдельный маршрут `/direct`.
-  // В этой странице всегда показываем только общий чат группы.
-  const tab: FeedTab = "group";
 
   if (!state || !currentUser) return null;
 
@@ -59,8 +51,6 @@ function GroupOverview() {
           </Badge>
         }
       />
-
-      {/* Личные сообщения доступны отдельной вкладкой `/direct`. */}
 
       <div className="grid gap-5 lg:grid-cols-5">
           <div className="space-y-5 lg:col-span-3">
@@ -110,7 +100,6 @@ function GroupOverview() {
               </Card>
             )}
 
-            <GroupFeed description="Пишите, поддерживайте друг друга и отмечайте маленькие победы." />
           </div>
 
           <div className="space-y-5 lg:col-span-2">

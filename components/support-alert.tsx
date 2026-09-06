@@ -20,7 +20,7 @@ export function SupportAlert({
   onWrite,
 }: {
   flagged: ParticipantStats[];
-  onWrite: (stats: ParticipantStats) => void;
+  onWrite?: (stats: ParticipantStats) => void;
 }) {
   return (
     <Card tone={flagged.length > 0 ? "warning" : "default"} className="p-5 sm:p-6">
@@ -66,12 +66,14 @@ export function SupportAlert({
                     ))}
                   </ul>
 
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <Button size="sm" onClick={() => onWrite(stats)}>
-                      <MessageCircle className="size-4" />
-                      Написать {toDative(stats.user.name)}
-                    </Button>
-                  </div>
+                  {onWrite && (
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <Button size="sm" onClick={() => onWrite(stats)}>
+                        <MessageCircle className="size-4" />
+                        Написать {toDative(stats.user.name)}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

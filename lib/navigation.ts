@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   ListChecks,
   Megaphone,
-  MessagesSquare,
   Settings,
   Trophy,
   TrendingUp,
@@ -25,7 +24,6 @@ export type NavItem = {
 
 export const participantNav: NavItem[] = [
   { label: "Сегодня", href: "/participant", icon: CalendarCheck, mobile: true },
-  { label: "Сообщения", href: "/direct", icon: MessagesSquare, mobile: true },
   { label: "Группа", href: "/group", icon: Users },
   { label: "Мероприятия", href: "/events", icon: CalendarDays },
   { label: "Прогресс", href: "/progress", icon: TrendingUp, mobile: true },
@@ -36,7 +34,6 @@ export const participantNav: NavItem[] = [
 export const curatorNav: NavItem[] = [
   { label: "Обзор", href: "/curator", icon: LayoutDashboard, mobile: true },
   { label: "Участники", href: "/curator/participants", icon: Users, mobile: true },
-  { label: "Сообщения", href: "/curator/messages", icon: MessagesSquare, mobile: true },
   { label: "Мероприятия", href: "/events", icon: CalendarDays, mobile: true },
   { label: "Задания", href: "/curator/tasks", icon: ListChecks },
   { label: "Объявления", href: "/curator/announcements", icon: Megaphone },
@@ -46,8 +43,6 @@ export const curatorNav: NavItem[] = [
 export function navForRole(role: UserRole): NavItem[] {
   return role === "curator" ? curatorNav : participantNav;
 }
-
-export const groupFeedIcon = MessagesSquare;
 
 /** Куда отправлять пользователя после входа. */
 export function homeForRole(role: UserRole): string {

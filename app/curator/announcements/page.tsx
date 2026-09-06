@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Megaphone } from "lucide-react";
 
-import { GroupFeed } from "@/components/group-feed";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -122,11 +121,7 @@ function CuratorAnnouncements() {
           </Card>
         </div>
 
-        <GroupFeed
-          limit={6}
-          description="Так объявление выглядит в группе."
-          className="lg:col-span-2"
-        />
+        {/* Чат группы (GroupFeed) удалён */}
       </div>
     </div>
   );

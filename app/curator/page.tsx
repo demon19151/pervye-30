@@ -13,8 +13,6 @@ import {
 
 import { AnnouncementModal } from "@/components/announcement-modal";
 import { CreateTaskModal } from "@/components/create-task-modal";
-import { useWriteToParticipant } from "@/components/curator/use-write-to-participant";
-import { GroupFeed } from "@/components/group-feed";
 import { InviteCodeCard } from "@/components/invite-code-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -41,7 +39,6 @@ export default function CuratorPage() {
 function CuratorOverview() {
   const { state, currentUser, update } = useAppStore();
   const { toast } = useToast();
-  const write = useWriteToParticipant();
 
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
@@ -129,7 +126,7 @@ function CuratorOverview() {
         />
       </div>
 
-      <SupportAlert flagged={flagged} onWrite={(item) => write.openFor(item.user)} />
+      <SupportAlert flagged={flagged} />
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
@@ -145,18 +142,11 @@ function CuratorOverview() {
         <ParticipantTable
           participants={participants}
           duration={state.group.duration}
-          onWrite={(item) => write.openFor(item.user)}
         />
       </section>
 
       <div className="grid gap-5 lg:grid-cols-5">
-        <GroupFeed
-          limit={5}
-          description="Что происходит в группе прямо сейчас."
-          className="lg:col-span-3"
-        />
-
-        <div className="space-y-5 lg:col-span-2">
+        <div className="space-y-5 lg:col-span-5">
           <InviteCodeCard code={state.group.inviteCode} />
         </div>
       </div>
@@ -183,7 +173,6 @@ function CuratorOverview() {
         onSubmit={handleAddAnnouncement}
       />
 
-      {write.modal}
     </div>
   );
 }

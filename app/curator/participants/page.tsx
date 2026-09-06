@@ -1,8 +1,6 @@
 "use client";
 
-import { MessageCircle, Users } from "lucide-react";
-
-import { useWriteToParticipant } from "@/components/curator/use-write-to-participant";
+import { Users } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/participant-status";
@@ -15,7 +13,7 @@ import { EmptyState } from "@/components/ui/states";
 import { getCheckIns } from "@/lib/services/checkInService";
 import { getAllParticipantStats } from "@/lib/services/statsService";
 import { useAppStore } from "@/lib/store/app-store";
-import { cn, formatScore, pluralize, toDative } from "@/lib/utils";
+import { cn, formatScore, pluralize } from "@/lib/utils";
 
 const moodEmoji = ["", "😞", "🙁", "😐", "🙂", "😄"];
 
@@ -29,7 +27,6 @@ export default function CuratorParticipantsPage() {
 
 function CuratorParticipants() {
   const { state } = useAppStore();
-  const write = useWriteToParticipant();
 
   if (!state) return null;
 
@@ -153,22 +150,13 @@ function CuratorParticipants() {
                   </div>
                 )}
 
-                <Button
-                  variant="outline"
-                  fullWidth
-                  className="mt-5"
-                  onClick={() => write.openFor(stats.user)}
-                >
-                  <MessageCircle className="size-4" />
-                  Написать {toDative(stats.user.name)}
-                </Button>
+                {/* Чат с участником удалён */}
               </Card>
             );
           })}
         </div>
       )}
 
-      {write.modal}
     </div>
   );
 }

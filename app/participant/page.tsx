@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, CheckCircle2, Flame, ListChecks } from "lucide-react";
 
 import { CheckInCard } from "@/components/check-in-card";
-import { GroupFeed } from "@/components/group-feed";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ProgressBar } from "@/components/progress-bar";
@@ -175,18 +174,10 @@ function ParticipantDashboard() {
             </Card>
           )}
 
-          <GroupFeed limit={4} description="Последние сообщения твоей группы." />
-
           <div className="grid gap-2 sm:grid-cols-2">
             <Link href="/group">
               <Button variant="outline" fullWidth>
-                Лента группы
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
-            <Link href="/direct">
-              <Button variant="secondary" fullWidth>
-                Сообщения с куратором
+                Группа
                 <ArrowRight className="size-4" />
               </Button>
             </Link>

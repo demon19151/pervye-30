@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ParticipantStats } from "@/lib/types";
-import { formatScore, pluralize, toDative } from "@/lib/utils";
+import { pluralize, toDative } from "@/lib/utils";
 
 export function ParticipantCard({
   stats,
@@ -47,13 +47,12 @@ export function ParticipantCard({
             className="mt-3"
           />
 
-          <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <Metric label="Настроение" value={`${formatScore(stats.mood)}/5`} />
-            <Metric label="Энергия" value={`${formatScore(stats.energy)}/5`} />
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-center">
+            <Metric label="Заданий" value={String(stats.completedTasks)} />
             <Metric
-              label="Пропуски"
+              label="Просрочено"
               value={String(stats.missedDays)}
-              hint={pluralize(stats.missedDays, "день", "дня", "дней")}
+              hint={pluralize(stats.missedDays, "шаг", "шага", "шагов")}
             />
           </dl>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
 import { BottomNavigation } from "@/components/layout/bottom-navigation";
@@ -12,6 +12,10 @@ import { Card } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/ui/states";
 import { navForRole } from "@/lib/navigation";
 import { getUnseenCalendarEventCount } from "@/lib/services/calendarEventsService";
+import {
+  getUnreadCuratorReplies,
+  getWaitingStudentCount,
+} from "@/lib/services/directMessageService";
 import { switchRole } from "@/lib/services/groupService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { UserRole } from "@/lib/types";
@@ -31,6 +35,7 @@ export function AppShell({
 }) {
   const { state, ready, currentUser, update } = useAppStore();
   const router = useRouter();
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -72,7 +77,15 @@ export function AppShell({
   const subtitle = currentUser.role === "curator" ? "Панель куратора" : state.group.name;
   const eventBadge =
     currentUser.role === "participant" ? getUnseenCalendarEventCount(state, currentUser.id) : 0;
-  const navBadges = eventBadge > 0 ? { "/events": eventBadge } : undefined;
+  const askBadge =
+    currentUser.role === "participant" ? getUnreadCuratorReplies(state, currentUser.id) : 0;
+  const questionsBadge =
+    currentUser.role === "curator" ? getWaitingStudentCount(state) : 0;
+  const navBadges = {
+    ...(eventBadge > 0 ? { "/events": eventBadge } : {}),
+    ...(askBadge > 0 ? { "/ask": askBadge } : {}),
+    ...(questionsBadge > 0 ? { "/curator/questions": questionsBadge } : {}),
+  };
 
   return (
     <div className="min-h-dvh">
@@ -130,7 +143,7 @@ export function AppShell({
       </main>
 
       <BottomNavigation items={items} />
-      {currentUser.role === "participant" ? <BotChatLauncher /> : null}
+      {currentUser.role === "participant" && pathname !== "/ask" ? <BotChatLauncher /> : null}
     </div>
   );
 }

@@ -61,7 +61,7 @@ export function MessageParticipantModal({
         </Field>
 
         <p className="text-[13px] text-muted">
-          {participantName} увидит это во вкладке «С куратором».
+          {participantName} увидит это во вкладке «Задать вопрос».
         </p>
 
         <div className="flex flex-wrap gap-1.5">

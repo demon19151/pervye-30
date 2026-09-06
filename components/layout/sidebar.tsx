@@ -54,7 +54,7 @@ export function Sidebar({
               {badge > 0 ? (
                 <span
                   className="inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
-                  aria-label={`${badge} новых мероприятий`}
+                  aria-label={`${badge} уведомлений`}
                 >
                   {badge > 9 ? "9+" : badge}
                 </span>

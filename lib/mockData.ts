@@ -2,12 +2,12 @@ import type {
   Announcement,
   AppState,
   CalendarEvent,
-  DailyCheckIn,
   DirectMessage,
   Group,
   Message,
   SupportSignal,
   Task,
+  TaskCompletion,
   User,
 } from "./types";
 
@@ -28,11 +28,13 @@ const demoGroup: Group = {
   inviteCode: DEMO_INVITE_CODE,
   duration: DEFAULT_DURATION,
   currentDay: 7,
+  /** 28 августа — день после приказа о формировании академических групп. */
+  programStartDate: "2026-08-28",
   curatorId: CURATOR_ID,
   weeklyGoal: {
-    title: "Познакомиться с сокурсниками и понять основные правила учёбы.",
-    target: 4,
-    done: 3,
+    title: "Закрыть шаги первой недели: куратор, встреча, доступы.",
+    target: 6,
+    done: 4,
   },
 };
 
@@ -44,151 +46,177 @@ const demoUsers: User[] = [
   { id: "u-dmitry", name: "Дмитрий", role: "participant", avatar: "🧔", groupId: GROUP_ID },
 ];
 
-/** Задания первой недели программы «Первые 30 дней в университете». */
+/** Недельные шаги разных типов: обязательные, рекомендуемые, вопрос и статус. */
 const demoTasks: Task[] = [
   {
-    id: "t-1",
+    id: "t-w1-1",
     groupId: GROUP_ID,
-    day: 1,
-    title: "Записать свои ожидания от первого месяца",
-    description:
-      "Опиши, каким ты хочешь видеть себя через месяц: что понимать, что уметь и с кем уже свободно общаться.",
+    week: 1,
+    kind: "required",
+    title: "Познакомиться с куратором",
+    description: "Сделано, когда ты понимаешь, к кому обращаться, и знаешь, как написать куратору.",
   },
   {
-    id: "t-2",
+    id: "t-w1-8",
     groupId: GROUP_ID,
-    day: 2,
-    title: "Познакомиться с тремя сокурсниками",
-    description:
-      "Найди трёх человек из группы и коротко поговори с ними: что у вас по учёбе и как вы будете пересекаться в университете.",
+    week: 1,
+    kind: "required",
+    title: "Ознакомиться с расписанием своей группы",
+    description: "Сделано, когда знаешь, где смотреть пары и какой корпус у ближайшего занятия.",
   },
   {
-    id: "t-3",
+    id: "t-w1-3",
     groupId: GROUP_ID,
-    day: 3,
-    title: "Узнать, как устроены основные процессы",
-    description:
-      "Разберись, как в команде появляются задачи, кто их согласует и где смотреть статус. Запиши шаги своими словами.",
+    week: 1,
+    kind: "required",
+    title: "Посетить вводную встречу",
+    description: "Сделано, когда ты был на собрании или заранее написал куратору, если не смог прийти.",
   },
   {
-    id: "t-4",
+    id: "t-w1-4",
     groupId: GROUP_ID,
-    day: 4,
-    title: "Задать один вопрос, который давно откладывался",
-    description:
-      "Выбери вопрос, который кажется «слишком простым», и всё-таки задай его. Обычно именно он экономит больше всего времени.",
+    week: 1,
+    kind: "required",
+    title: "Найти учебный корпус, аудитории и деканат на карте",
+    description: "Сделано, когда ты увереннее ориентируешься и не ищешь корпус в чате каждое утро.",
   },
   {
-    id: "t-5",
+    id: "t-w1-6",
     groupId: GROUP_ID,
-    day: 5,
-    title: "Отметить первое маленькое достижение",
-    description:
-      "Найди то, что уже получилось — пусть даже небольшое. Запиши, что именно помогло этого добиться.",
+    week: 1,
+    kind: "required",
+    title: "Проверить доступ к почте, личному кабинету и учебным платформам",
+    description: "Сделано, когда вход работает и ты можешь пользоваться нужными ресурсами.",
   },
   {
-    id: "t-6",
+    id: "t-w1-7",
     groupId: GROUP_ID,
-    day: 6,
-    title: "Попросить обратную связь",
-    description:
-      "Попроси преподавателя или тьютора коротко сказать, что уже идёт хорошо и на что стоит обратить внимание.",
+    week: 1,
+    kind: "question",
+    title: "Понимаешь ли ты, где искать расписание?",
+    description: "Если пока нет — куратор увидит ответ и поможет. Это не провал, а сигнал.",
   },
   {
-    id: "t-7",
+    id: "t-w1-2",
     groupId: GROUP_ID,
-    day: 7,
-    title: "Подвести итоги первой недели",
-    description:
-      "Запиши, что уже получилось узнать, что удивило и что хотелось бы улучшить на следующей неделе.",
+    week: 1,
+    kind: "recommended",
+    title: "Познакомиться хотя бы с тремя одногруппниками",
+    description: "Не обязательно сегодня. Сделано, когда появилось первое живое общение в группе.",
+  },
+  {
+    id: "t-w1-5",
+    groupId: GROUP_ID,
+    week: 1,
+    kind: "recommended",
+    title: "Узнать, где библиотека, столовая, медпункт и места отдыха",
+    description: "Рекомендуем на этой неделе. Сделано, когда знаешь основные сервисы кампуса.",
+  },
+  {
+    id: "t-w2-1",
+    groupId: GROUP_ID,
+    week: 2,
+    kind: "required",
+    title: "Ознакомиться с учебным планом и требованиями преподавателей",
+    description: "Сделано, когда понимаешь структуру обучения и что ждут на ближайших дисциплинах.",
+  },
+  {
+    id: "t-w2-2",
+    groupId: GROUP_ID,
+    week: 2,
+    kind: "required",
+    title: "Узнать правила посещения, сдачи работ и пересдач",
+    description: "Сделано, когда меньше риска пропустить важное требование или дедлайн.",
+  },
+  {
+    id: "t-w2-3",
+    groupId: GROUP_ID,
+    week: 2,
+    kind: "required",
+    title: "Найти контакты деканата, старосты и технической поддержки",
+    description: "Сделано, когда знаешь, куда обращаться с разными вопросами — не только к куратору.",
+  },
+  {
+    id: "t-w2-4",
+    groupId: GROUP_ID,
+    week: 2,
+    kind: "status",
+    title: "Как тебе даётся первая учебная неделя?",
+    description: "Выбери статус — куратор увидит, если есть вопрос или нужна помощь.",
+  },
+  {
+    id: "t-w3-3",
+    groupId: GROUP_ID,
+    week: 3,
+    kind: "required",
+    title: "Проверить первые учебные дедлайны",
+    description: "Сделано, когда есть список ближайших сдач — и ты не держишь их только в голове.",
+  },
+  {
+    id: "t-w3-2",
+    groupId: GROUP_ID,
+    week: 3,
+    kind: "status",
+    title: "Как проходит адаптация?",
+    description: "Короткий статус для куратора: всё понятно, есть вопрос или нужна помощь.",
+  },
+  {
+    id: "t-w3-1",
+    groupId: GROUP_ID,
+    week: 3,
+    kind: "recommended",
+    title: "Посетить одно мероприятие или вступить в студенческое объединение",
+    description: "Сделано, когда ты откликнулся в календаре или записался в объединение.",
+  },
+  {
+    id: "t-w4-1",
+    groupId: GROUP_ID,
+    week: 4,
+    kind: "required",
+    title: "Оценить свой первый месяц по шкале от 1 до 5",
+    description: "Сделано, когда ты коротко записал, что получилось за первый месяц и что ещё хочешь закрыть.",
+  },
+  {
+    id: "t-w4-2",
+    groupId: GROUP_ID,
+    week: 4,
+    kind: "status",
+    title: "Что осталось непонятным после первого месяца?",
+    description: "Выбери статус. Если есть вопрос или нужна помощь — куратор увидит это отдельно.",
+  },
+  {
+    id: "t-w4-3",
+    groupId: GROUP_ID,
+    week: 4,
+    kind: "recommended",
+    title: "Составить план на следующий месяц",
+    description: "Сделано, когда есть 2–3 своих шага на октябрь: учёба, документы или внеучебка.",
   },
 ];
 
-type CheckInSeed = {
-  userId: string;
-  /** Значения по дням, начиная с первого дня программы. */
-  days: Array<{ completed: boolean; mood: number; energy: number; note?: string }>;
-};
+function buildTaskCompletions(): TaskCompletion[] {
+  const now = new Date().toISOString();
+  const mark = (userId: string, taskIds: string[]): TaskCompletion[] =>
+    taskIds.map((taskId, index) => ({
+      id: `tc-${userId}-${index + 1}`,
+      taskId,
+      userId,
+      createdAt: now,
+    }));
 
-/**
- * Демонстрационные состояния участников (§20 брифа).
- *
- * «Текущий день» участника выводится из данных: это первый день без чек-ина,
- * ограниченный текущим днём группы. Поэтому у Анны — день 7, у Максима — 6,
- * у Ирины — 5, а у Дмитрия, закрывшего седьмой день, — 7.
- */
-const checkInSeeds: CheckInSeed[] = [
-  {
-    // Анна — активная: 6 закрытых дней, седьмой ждёт её в демо-сценарии.
-    userId: DEMO_PARTICIPANT_ID,
-    days: [
-      { completed: true, mood: 3, energy: 3, note: "Много новых имён, но первый день прошёл спокойно." },
-      { completed: true, mood: 4, energy: 3 },
-      { completed: true, mood: 4, energy: 4, note: "Разобралась, где искать статусы задач." },
-      { completed: true, mood: 4, energy: 4 },
-      { completed: true, mood: 4, energy: 4 },
-      { completed: true, mood: 4, energy: 4, note: "Получила первую обратную связь, оказалось не страшно." },
-    ],
-  },
-  {
-    // Максим — один пропуск на четвёртом дне.
-    userId: "u-maxim",
-    days: [
-      { completed: true, mood: 3, energy: 4 },
-      { completed: true, mood: 4, energy: 3 },
-      { completed: true, mood: 4, energy: 3 },
-      { completed: false, mood: 4, energy: 3, note: "День ушёл на встречи, задание не успел." },
-      { completed: true, mood: 4, energy: 3 },
-    ],
-  },
-  {
-    // Ирина — низкое настроение и два пропущенных дня.
-    userId: "u-irina",
-    days: [
-      { completed: true, mood: 3, energy: 3 },
-      { completed: true, mood: 2, energy: 2 },
-      { completed: false, mood: 2, energy: 2, note: "Пока сложно понять, к кому идти с вопросами." },
-      { completed: false, mood: 2, energy: 2 },
-    ],
-  },
-  {
-    // Дмитрий — очень активный, седьмой день уже закрыт.
-    userId: "u-dmitry",
-    days: [
-      { completed: true, mood: 4, energy: 3 },
-      { completed: true, mood: 4, energy: 4 },
-      { completed: true, mood: 5, energy: 4 },
-      { completed: true, mood: 5, energy: 4 },
-      { completed: true, mood: 5, energy: 4 },
-      { completed: true, mood: 5, energy: 4 },
-      { completed: true, mood: 5, energy: 4, note: "Первая неделя прошла лучше, чем я ожидал." },
-    ],
-  },
-];
-
-function buildCheckIns(now: Date): DailyCheckIn[] {
-  const result: DailyCheckIn[] = [];
-
-  for (const seed of checkInSeeds) {
-    seed.days.forEach((value, index) => {
-      const day = index + 1;
-      const updatedAt = new Date(now);
-      updatedAt.setDate(updatedAt.getDate() - (demoGroup.currentDay - day));
-
-      result.push({
-        id: `ci-${seed.userId}-${day}`,
-        userId: seed.userId,
-        day,
-        completed: value.completed,
-        mood: value.mood,
-        energy: value.energy,
-        note: value.note,
-        updatedAt: updatedAt.toISOString(),
-      });
-    });
-  }
-
-  return result;
+  return [
+    ...mark(DEMO_PARTICIPANT_ID, ["t-w1-1", "t-w1-2", "t-w1-3", "t-w1-4"]),
+    ...mark("u-maxim", ["t-w1-1", "t-w1-3"]),
+    ...mark("u-irina", ["t-w1-1"]),
+    ...mark("u-dmitry", ["t-w1-1", "t-w1-2", "t-w1-3", "t-w1-4", "t-w1-5", "t-w1-6", "t-w1-8"]),
+    {
+      id: "tc-dmitry-q",
+      taskId: "t-w1-7",
+      userId: "u-dmitry",
+      createdAt: now,
+      answer: "yes",
+    },
+  ];
 }
 
 function buildMessages(now: Date): Message[] {
@@ -239,17 +267,8 @@ function buildMessages(now: Date): Message[] {
   ];
 }
 
-function buildSignals(now: Date): SupportSignal[] {
-  return [
-    {
-      id: "s-1",
-      userId: "u-irina",
-      type: "manual",
-      message: "Сейчас просто тяжело",
-      createdAt: new Date(now.getTime() - 96 * 60_000).toISOString(),
-      resolved: false,
-    },
-  ];
+function buildSignals(_now: Date): SupportSignal[] {
+  return [];
 }
 
 function buildDirectMessages(now: Date): DirectMessage[] {
@@ -291,8 +310,7 @@ function buildAnnouncements(now: Date): Announcement[] {
 /** Значения для предпросмотра итоговой страницы, пока программа не завершена. */
 export const SUMMARY_PREVIEW = {
   completedTasks: 23,
-  activeDays: 27,
-  moodDelta: 0.8,
+  closedWeeks: 4,
 };
 
 /** Согласуется по роду, чтобы текст не звучал чужим для участницы. */
@@ -300,7 +318,7 @@ export function curatorSummaryNote(feminine: boolean): string {
   return `Ты хорошо ${feminine ? "вошла" : "вошёл"} в ритм команды. Особенно заметно, как изменилось твоё понимание процессов за последний месяц.`;
 }
 
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 11;
 
 /** Собирает полный демонстрационный снимок состояния. */
 export function createInitialState(now: Date = new Date()): AppState {
@@ -309,7 +327,7 @@ export function createInitialState(now: Date = new Date()): AppState {
     group: { ...demoGroup, weeklyGoal: { ...demoGroup.weeklyGoal! } },
     users: demoUsers.map((user) => ({ ...user })),
     tasks: demoTasks.map((task) => ({ ...task })),
-    checkIns: buildCheckIns(now),
+    taskCompletions: buildTaskCompletions(),
     messages: buildMessages(now),
     directMessages: buildDirectMessages(now),
     signals: buildSignals(now),
@@ -318,14 +336,25 @@ export function createInitialState(now: Date = new Date()): AppState {
     calendarEventResponses: [],
     calendarEvents: [
       {
+        id: "ce-meeting",
+        groupId: GROUP_ID,
+        day: 5,
+        time: "10:00",
+        title: "Собрание первокурсников",
+        location: "ГУК, холл 1 этажа",
+        description: "Первая встреча курса: куда ходить на пары, кто куратор и где появится чат группы.",
+        createdAt: new Date(now.getTime() - 4 * 24 * 60_000).toISOString(),
+        updatedAt: new Date(now.getTime() - 2 * 24 * 60_000).toISOString(),
+      },
+      {
         id: "ce-1",
         groupId: GROUP_ID,
-        day: 4,
+        day: 25,
         time: "10:00",
         title: "Хакатон",
         location: "Онлайн (пример)",
         link: "https://example.com/hackathon",
-        description: "Тестовое мероприятие: короткий хакатон с командной работой. Уточни детали по ссылке.",
+        description: "Короткий хакатон с командной работой. Уточни детали по ссылке и отметься, пойдёшь ли.",
         createdAt: new Date(now.getTime() - 3 * 24 * 60_000).toISOString(),
         updatedAt: new Date(now.getTime() - 24 * 60_000).toISOString(),
       },

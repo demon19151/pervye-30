@@ -4,6 +4,7 @@ import {
   createGroup,
   getCurator,
   getCurrentUser,
+  getParticipantDay,
   getParticipants,
   isValidInviteCode,
   joinGroup,
@@ -131,5 +132,10 @@ describe("groupService", () => {
     const state = createInitialState();
     const next = updateWeeklyGoal(state, 4);
     expect(next.group.weeklyGoal?.done).toBe(4);
+  });
+
+  it("getParticipantDay совпадает с текущим днём группы", () => {
+    const state = createInitialState();
+    expect(getParticipantDay(state, "u-anna")).toBe(state.group.currentDay);
   });
 });

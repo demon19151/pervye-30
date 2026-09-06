@@ -96,7 +96,7 @@ export default function CreateGroupPage() {
                     className="flex items-start gap-3 rounded-2xl bg-surface-muted px-4 py-3"
                   >
                     <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface text-xs font-semibold text-accent-strong tabular-nums">
-                      {task.day}
+                      {task.week}
                     </span>
                     <span className="pt-0.5 text-sm leading-snug">{task.title}</span>
                   </li>

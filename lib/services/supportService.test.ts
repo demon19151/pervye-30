@@ -40,7 +40,6 @@ describe("supportService", () => {
 
     const types = signals.map((s) => s.type);
     expect(types).toContain("manual");
-    expect(types).toContain("low_mood");
     expect(types).toContain("missed_tasks");
     expect(signals.every((s) => s.resolved)).toBe(true);
   });

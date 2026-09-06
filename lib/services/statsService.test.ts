@@ -18,13 +18,20 @@ describe("statsService", () => {
     expect(stats?.progress).toBeLessThanOrEqual(100);
   });
 
-  it("участник с низким настроением и пропусками получает статус needs_support или missed", () => {
+  it("участник без просрочки и сигналов получает статус active", () => {
     const state = createInitialState(new Date("2024-01-08T00:00:00Z"));
     const stats = getParticipantStats(state, "u-irina");
 
     expect(stats).not.toBeNull();
-    expect(["needs_support", "missed"]).toContain(stats?.status);
-    expect(stats?.warnings.length).toBeGreaterThan(0);
+    expect(stats?.status).toBe("active");
+    expect(stats?.warnings).toHaveLength(0);
+  });
+
+  it("пустые дни без задания не считаются пропусками", () => {
+    const state = createInitialState(new Date("2024-01-08T00:00:00Z"));
+    const stats = getParticipantStats(state, DEMO_PARTICIPANT_ID);
+
+    expect(stats?.missedDays).toBe(0);
   });
 
   it("активный участник без пропусков получает статус active", () => {

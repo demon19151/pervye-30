@@ -131,3 +131,8 @@ export function getParticipants(state: AppState): User[] {
 export function getCurator(state: AppState): User | undefined {
   return state.users.find((user) => user.id === state.group.curatorId);
 }
+
+/** Текущий день программы для участника — общий календарь группы. */
+export function getParticipantDay(state: AppState, _userId?: string): number {
+  return Math.min(Math.max(state.group.currentDay, 1), state.group.duration);
+}

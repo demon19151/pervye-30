@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
 import type { ParticipantStats } from "@/lib/types";
-import { cn, formatScore } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 /** На мобильном таблица превращается в список карточек. */
 export function ParticipantTable({
@@ -56,9 +56,7 @@ export function ParticipantTable({
               <Th className="pl-6">Участник</Th>
               <Th className="w-52">Прогресс</Th>
               <Th>Текущий день</Th>
-              <Th>Настроение</Th>
-              <Th>Энергия</Th>
-              <Th>Пропуски</Th>
+              <Th>Просрочено</Th>
               <Th>Статус</Th>
               <Th className="pr-6 text-right">Действие</Th>
             </tr>
@@ -90,8 +88,6 @@ export function ParticipantTable({
                   {stats.currentDay}
                   <span className="text-subtle"> / {duration}</span>
                 </td>
-                <td className="py-4 pr-4 tabular-nums">{formatScore(stats.mood)}/5</td>
-                <td className="py-4 pr-4 tabular-nums">{formatScore(stats.energy)}/5</td>
                 <td className="py-4 pr-4">
                   <span
                     className={cn(

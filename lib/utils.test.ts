@@ -7,6 +7,7 @@ import {
   formatRelativeTime,
   formatScore,
   formatTime,
+  getProgramWeekdayLabels,
   isFeminineName,
   pluralize,
   toDative,
@@ -139,6 +140,24 @@ describe("pluralize", () => {
     expect(pluralize(5, "день", "дня", "дней")).toBe("дней");
     expect(pluralize(11, "день", "дня", "дней")).toBe("дней");
     expect(pluralize(0, "день", "дня", "дней")).toBe("дней");
+  });
+});
+
+describe("getProgramWeekdayLabels", () => {
+  it("начинает колонки с пятницы для старта 28 августа 2026", () => {
+    expect(getProgramWeekdayLabels("2026-08-28")).toEqual([
+      "Пт",
+      "Сб",
+      "Вс",
+      "Пн",
+      "Вт",
+      "Ср",
+      "Чт",
+    ]);
+  });
+
+  it("возвращает пн–вс, если даты нет", () => {
+    expect(getProgramWeekdayLabels()).toEqual(["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]);
   });
 });
 

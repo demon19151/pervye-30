@@ -1,80 +1,49 @@
-import { average, isFeminineName } from "../utils";
+import { isFeminineName } from "../utils";
 import type {
   AppState,
-  DailyCheckIn,
   ParticipantStats,
   ParticipantStatus,
   User,
   Warning,
 } from "../types";
-import { getCheckIns, getParticipantDay } from "./checkInService";
-import { getParticipants } from "./groupService";
+import { getParticipantDay, getParticipants } from "./groupService";
 import { getActiveSignals, getSignalsForUser } from "./supportService";
-
-/** Сколько последних дней учитывается в среднем настроении и энергии. */
-export const SCORE_WINDOW = 3;
-
-/** Ниже этого значения средние настроение/энергия считаются низкими (условие B). */
-export const LOW_SCORE_THRESHOLD = 2.5;
-
-/** Условие A: столько дней подряд без отметки о выполнении. */
-export const MISSED_STREAK_THRESHOLD = 3;
-
-/** Мягкий сигнал: столько пропущенных дней всего. */
-export const MISSED_TOTAL_THRESHOLD = 2;
+import {
+  getCompletedTaskCount,
+  getProgramWeek,
+  getTasksByWeek,
+  getWeekCount,
+  hasCompletedTask,
+  isRequiredTask,
+} from "./taskService";
 
 /**
  * Выполнение программы к текущему дню участника.
- *
- * Задания весят больше, чем чек-ины: важнее сделать шаг, чем просто отметиться.
- * Значение всегда относительно пройденной части программы, а не всех 30 дней,
- * поэтому участник «в графике» видит 100%.
+ * Считается только по обязательным заданиям уже начавшихся недель.
  */
-const TASK_WEIGHT = 0.7;
-const CHECK_IN_WEIGHT = 0.3;
-
-function scoreWindow(checkIns: DailyCheckIn[], pick: (item: DailyCheckIn) => number): number {
-  const values = checkIns
-    .filter((item) => pick(item) > 0)
-    .slice(-SCORE_WINDOW)
-    .map(pick);
-
-  return average(values);
+function countOverdueTasks(state: AppState, userId: string, currentDay: number): number {
+  const currentWeek = getProgramWeek(currentDay, state.group.duration);
+  return state.tasks.filter(
+    (task) =>
+      isRequiredTask(task) &&
+      task.week < currentWeek &&
+      !hasCompletedTask(state, task.id, userId),
+  ).length;
 }
 
-function countMissedDays(checkIns: DailyCheckIn[], currentDay: number): number {
-  let missed = 0;
+function countClosedWeeks(state: AppState, userId: string, currentDay: number): number {
+  const currentWeek = getProgramWeek(currentDay, state.group.duration);
+  const weeks = Math.min(currentWeek, getWeekCount(state.group.duration));
+  let closed = 0;
 
-  for (let day = 1; day < currentDay; day += 1) {
-    const checkIn = checkIns.find((item) => item.day === day);
-    if (!checkIn || !checkIn.completed) missed += 1;
+  for (let week = 1; week <= weeks; week += 1) {
+    const required = getTasksByWeek(state, week).filter(isRequiredTask);
+    if (required.length > 0 && required.every((task) => hasCompletedTask(state, task.id, userId))) {
+      closed += 1;
+    }
   }
 
-  return missed;
-}
-
-function countMissedStreak(checkIns: DailyCheckIn[], currentDay: number): number {
-  let streak = 0;
-
-  for (let day = currentDay - 1; day >= 1; day -= 1) {
-    const checkIn = checkIns.find((item) => item.day === day);
-    if (!checkIn || !checkIn.completed) streak += 1;
-    else break;
-  }
-
-  return streak;
-}
-
-function countCompletedStreak(checkIns: DailyCheckIn[], currentDay: number): number {
-  let streak = 0;
-
-  for (let day = currentDay; day >= 1; day -= 1) {
-    const checkIn = checkIns.find((item) => item.day === day);
-    if (checkIn?.completed) streak += 1;
-    else if (day !== currentDay) break;
-  }
-
-  return streak;
+  return closed;
 }
 
 export function getParticipantStats(state: AppState, userId: string): ParticipantStats | null {
@@ -85,94 +54,53 @@ export function getParticipantStats(state: AppState, userId: string): Participan
 }
 
 function buildStats(state: AppState, user: User): ParticipantStats {
-  const checkIns = getCheckIns(state, user.id);
   const currentDay = getParticipantDay(state, user.id);
   const elapsedDays = Math.max(currentDay, 1);
-
-  const completedTasks = checkIns.filter((item) => item.completed).length;
-  const activeDays = checkIns.length;
-
-  const progress = Math.round(
-    Math.min(
-      1,
-      (completedTasks / elapsedDays) * TASK_WEIGHT + (activeDays / elapsedDays) * CHECK_IN_WEIGHT,
-    ) * 100,
+  const currentWeek = getProgramWeek(elapsedDays, state.group.duration);
+  const assignedTasks = state.tasks.filter(
+    (task) => isRequiredTask(task) && task.week <= currentWeek,
   );
+  const completedTasks = getCompletedTaskCount(state, user.id);
+  const completedAssigned = assignedTasks.filter((task) =>
+    hasCompletedTask(state, task.id, user.id),
+  ).length;
+  const overdueTasks = countOverdueTasks(state, user.id, currentDay);
+  const taskShare = assignedTasks.length ? completedAssigned / assignedTasks.length : 1;
+  const progress = Math.round(Math.min(1, taskShare) * 100);
 
-  const mood = scoreWindow(checkIns, (item) => item.mood);
-  const energy = scoreWindow(checkIns, (item) => item.energy);
-  const missedDays = countMissedDays(checkIns, currentDay);
-  const missedStreak = countMissedStreak(checkIns, currentDay);
-
-  const warnings = buildWarnings(state, user.id, { mood, energy, missedDays, missedStreak });
+  const warnings = buildWarnings(state, user.id, { overdueTasks });
 
   return {
     user,
     progress,
     currentDay,
-    mood,
-    energy,
-    missedDays,
+    missedDays: overdueTasks,
     completedTasks,
-    activeDays,
-    streak: countCompletedStreak(checkIns, currentDay),
-    // «Активен сегодня» — участник не отстаёт от группы больше чем на один день.
+    closedWeeks: countClosedWeeks(state, user.id, currentDay),
     activeToday: currentDay >= state.group.currentDay - 1,
-    status: resolveStatus(warnings, missedDays),
+    status: resolveStatus(warnings, overdueTasks),
     warnings,
   };
 }
 
 type WarningInput = {
-  mood: number;
-  energy: number;
-  missedDays: number;
-  missedStreak: number;
+  overdueTasks: number;
 };
 
-/**
- * Правила из §8 брифа. Это только социальный сигнал внимания для куратора:
- * никаких оценок состояния человека здесь нет и быть не должно.
- */
 function buildWarnings(state: AppState, userId: string, input: WarningInput): Warning[] {
   const warnings: Warning[] = [];
 
-  // Если куратор уже «снял» предупреждение после сообщения,
-  // то соответствующий resolved-сигнал существует — такие предупреждения
-  // не показываем в блоке «Требуют внимания».
   const hasResolvedMissedTasks = getSignalsForUser(state, userId).some(
     (s) => s.type === "missed_tasks" && s.resolved,
   );
-  const hasResolvedLowMood = getSignalsForUser(state, userId).some(
-    (s) => s.type === "low_mood" && s.resolved,
-  );
 
-  // Условие A — несколько дней подряд без отметки о выполнении.
-  if (!hasResolvedMissedTasks && input.missedStreak >= MISSED_STREAK_THRESHOLD) {
+  if (!hasResolvedMissedTasks && input.overdueTasks > 0) {
     warnings.push({
       reason: "missed_tasks",
-      label: `Не отмечает задания ${input.missedStreak} ${input.missedStreak > 4 ? "дней" : "дня"} подряд`,
-    });
-  } else if (!hasResolvedMissedTasks && input.missedDays >= MISSED_TOTAL_THRESHOLD) {
-    warnings.push({ reason: "missed_tasks", label: "Несколько пропущенных дней" });
-  }
-
-  // Условие B — низкие средние значения настроения или энергии.
-  const lowMood = input.mood > 0 && input.mood <= LOW_SCORE_THRESHOLD;
-  const lowEnergy = input.energy > 0 && input.energy <= LOW_SCORE_THRESHOLD;
-
-  if (!hasResolvedLowMood && (lowMood || lowEnergy)) {
-    warnings.push({
-      reason: "low_mood",
-      label: lowMood && lowEnergy
-        ? "Низкие настроение и энергия несколько дней подряд"
-        : lowMood
-          ? "Низкое настроение несколько дней подряд"
-          : "Низкая энергия несколько дней подряд",
+      label: `Не закрыты ${input.overdueTasks} ${input.overdueTasks === 1 ? "задание" : input.overdueTasks < 5 ? "задания" : "заданий"} прошлой недели`,
     });
   }
 
-  // Условие C — участник сам попросил поддержку.
   const manual = getActiveSignals(state).find(
     (signal) => signal.userId === userId && signal.type === "manual",
   );
@@ -187,13 +115,9 @@ function buildWarnings(state: AppState, userId: string, input: WarningInput): Wa
   return warnings;
 }
 
-function resolveStatus(warnings: Warning[], missedDays: number): ParticipantStatus {
-  const needsSupport = warnings.some(
-    (warning) => warning.reason === "low_mood" || warning.reason === "manual",
-  );
-
-  if (needsSupport) return "needs_support";
-  if (missedDays > 0 || warnings.length > 0) return "missed";
+function resolveStatus(warnings: Warning[], overdueTasks: number): ParticipantStatus {
+  if (warnings.some((warning) => warning.reason === "manual")) return "needs_support";
+  if (overdueTasks > 0 || warnings.length > 0) return "missed";
   return "active";
 }
 

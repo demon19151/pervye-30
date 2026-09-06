@@ -18,9 +18,10 @@ import { ParticipantTable } from "@/components/participant-table";
 import { StatCard } from "@/components/stat-card";
 import { SupportAlert } from "@/components/support-alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { getAllParticipantStats, getGroupStats } from "@/lib/services/statsService";
-import { addTask, getNextFreeDay, type CreateTaskInput } from "@/lib/services/taskService";
+import { addTask, getCurrentWeek, type CreateTaskInput } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { ParticipantStats } from "@/lib/types";
 import { toDative } from "@/lib/utils";
@@ -57,7 +58,7 @@ function CuratorOverview() {
     update(() => result.state);
     setTaskError(null);
     setTaskOpen(false);
-    toast(`Задание на день ${result.task.day} добавлено`);
+    toast(`Задание на неделю ${result.task.week} добавлено`);
   };
 
   return (
@@ -105,6 +106,23 @@ function CuratorOverview() {
 
       <SupportAlert flagged={flagged} />
 
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold sm:text-lg">Вопросы участников</h2>
+            <p className="mt-1 text-sm text-muted">
+              Личные сообщения из вкладки «Задать вопрос».
+            </p>
+          </div>
+          <Link
+            href="/curator/questions"
+            className="text-[13px] font-medium text-accent hover:text-accent-strong"
+          >
+            Открыть переписку
+          </Link>
+        </div>
+      </Card>
+
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-semibold">Участники</h2>
@@ -134,7 +152,7 @@ function CuratorOverview() {
           setTaskOpen(false);
           setTaskError(null);
         }}
-        defaultDay={getNextFreeDay(state)}
+        defaultWeek={getCurrentWeek(state)}
         duration={state.group.duration}
         error={taskError}
         onSubmit={handleAddTask}

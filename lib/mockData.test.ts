@@ -16,7 +16,7 @@ describe("mockData / createInitialState", () => {
     const a = createInitialState(now);
     const b = createInitialState(now);
 
-    expect(a.checkIns).toEqual(b.checkIns);
+    expect(a.taskCompletions).toEqual(b.taskCompletions);
     expect(a.messages).toEqual(b.messages);
   });
 

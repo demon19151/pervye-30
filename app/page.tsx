@@ -21,7 +21,7 @@ const steps = [
   {
     icon: ClipboardList,
     title: "Получи задание",
-    text: "Каждый день — один небольшой шаг.",
+    text: "Шаги на неделю, а не на каждый день. Закрой, когда получится.",
   },
   {
     icon: CalendarCheck,
@@ -85,8 +85,8 @@ export default function LandingPage() {
                 Не проходи первый месяц в одиночку.
               </p>
               <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted">
-                Небольшие ежедневные шаги, поддержка группы и куратор рядом. Каждый день — маленький
-                шаг, поддержка группы и внимание к своему состоянию.
+                Конкретные шаги на первый месяц, поддержка группы и куратор рядом. Не каждый день
+                нужен шаг — только то, что нельзя пропустить.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -120,8 +120,7 @@ export default function LandingPage() {
             <div className="max-w-xl">
               <h2 className="text-3xl font-semibold sm:text-4xl">Как это устроено</h2>
               <p className="mt-3 text-[17px] text-muted">
-                Три простых действия каждый день — и первый месяц перестаёт быть испытанием
-                в одиночку.
+                Три простых действия — и первый месяц перестаёт быть испытанием в одиночку.
               </p>
             </div>
 
@@ -250,11 +249,11 @@ function HeroPreview() {
       <Card className="p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <Badge tone="accent">Задание дня</Badge>
-          <span className="text-[13px] text-subtle">День 7 из 30</span>
+          <span className="text-[13px] text-subtle">Неделя 1 · 28 августа — 3 сентября</span>
         </div>
-        <h3 className="mt-4 text-lg font-semibold">Подвести итоги первой недели</h3>
+        <h3 className="mt-4 text-lg font-semibold">Познакомиться с куратором</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Запиши, что уже получилось узнать и что хотелось бы улучшить.
+          Сделано, когда понимаешь, к кому обращаться, и знаешь, как написать куратору.
         </p>
         <div className="mt-5 h-11 flex items-center justify-center rounded-2xl bg-success-soft text-sm font-medium text-success-strong ring-1 ring-inset ring-success/25">
           Выполнено ✓
@@ -289,19 +288,17 @@ function HeroPreview() {
         </div>
       </Card>
 
-      <Card tone="warning" className="p-5 sm:p-6 sm:col-span-2 lg:col-span-1">
+      <Card className="p-5 sm:p-6 sm:col-span-2 lg:col-span-1">
         <div className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-surface text-warning">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-success-soft text-success-strong">
             <HeartHandshake className="size-5" />
           </span>
           <p className="text-sm font-semibold">Требуют внимания</p>
         </div>
-        <p className="mt-4 font-semibold">Ирина</p>
-        <p className="text-sm text-warning">Участнику может понадобиться поддержка</p>
-        <ul className="mt-3 space-y-1 text-[13px] text-muted">
-          <li>Низкое настроение несколько дней подряд</li>
-          <li>Несколько пропущенных дней</li>
-        </ul>
+        <p className="mt-4 text-sm text-muted">
+          Сейчас никому не нужна дополнительная поддержка. Сигнал появится по просроченным заданиям
+          или если участник отметит в шаге, что нужна помощь.
+        </p>
       </Card>
     </div>
   );

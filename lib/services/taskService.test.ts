@@ -1,84 +1,80 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState } from "../mockData";
-import { addTask, getNextFreeDay, getTaskByDay, getTasks, removeTask } from "./taskService";
+import {
+  addTask,
+  completeWeekTask,
+  getProgramWeek,
+  getTasks,
+  getTasksByWeek,
+  getWeekBounds,
+  getWeekCount,
+  hasCompletedTask,
+  removeTask,
+  undoWeekTask,
+} from "./taskService";
 
 describe("taskService", () => {
-  it("getTasks возвращает задания, отсортированные по дню", () => {
+  it("getTasks сортирует задания по неделе", () => {
     const state = createInitialState();
-    const tasks = getTasks(state);
-    const days = tasks.map((t) => t.day);
-    expect(days).toEqual([...days].sort((a, b) => a - b));
+    const weeks = getTasks(state).map((task) => task.week);
+    expect(weeks).toEqual([...weeks].sort((a, b) => a - b));
   });
 
-  it("getTaskByDay находит задание по дню", () => {
+  it("первая неделя содержит шесть шагов", () => {
     const state = createInitialState();
-    expect(getTaskByDay(state, 1)?.day).toBe(1);
-    expect(getTaskByDay(state, 999)).toBeUndefined();
+    expect(getTasksByWeek(state, 1).length).toBeGreaterThanOrEqual(6);
+    expect(getProgramWeek(7, state.group.duration)).toBe(1);
+    expect(getWeekBounds(1, 30)).toEqual({ start: 1, end: 7 });
+    expect(getWeekCount(30)).toBe(4);
   });
 
   describe("addTask", () => {
-    it("возвращает ошибку для дня вне диапазона", () => {
+    it("возвращает ошибку для недели вне диапазона", () => {
       const state = createInitialState();
-      const result = addTask(state, { day: 0, title: "Тест задание", description: "" });
-      expect("error" in result).toBe(true);
-    });
-
-    it("возвращает ошибку для дня больше продолжительности программы", () => {
-      const state = createInitialState();
-      const result = addTask(state, { day: state.group.duration + 1, title: "Тест задание", description: "" });
+      const result = addTask(state, { week: 0, title: "Тест задание", description: "" });
       expect("error" in result).toBe(true);
     });
 
     it("возвращает ошибку для слишком короткого названия", () => {
       const state = createInitialState();
-      const day = getNextFreeDay(state);
-      const result = addTask(state, { day, title: "ab", description: "" });
+      const result = addTask(state, { week: 1, title: "ab", description: "" });
       expect("error" in result).toBe(true);
     });
 
-    it("возвращает ошибку, если на день уже есть задание", () => {
+    it("создаёт ещё одно задание на ту же неделю", () => {
       const state = createInitialState();
-      const result = addTask(state, { day: 1, title: "Другое задание", description: "" });
-      expect("error" in result).toBe(true);
-    });
-
-    it("создаёт задание при валидных данных", () => {
-      const state = createInitialState();
-      const day = getNextFreeDay(state);
-      const result = addTask(state, { day, title: "Новое задание", description: "Описание" });
+      const result = addTask(state, { week: 1, title: "Новое задание", description: "Описание" });
 
       expect("task" in result).toBe(true);
       if ("task" in result) {
-        expect(result.task.day).toBe(day);
-        expect(getTaskByDay(result.state, day)?.title).toBe("Новое задание");
+        expect(result.task.week).toBe(1);
+        expect(result.task.kind).toBe("required");
+        expect(getTasksByWeek(result.state, 1).some((task) => task.title === "Новое задание")).toBe(
+          true,
+        );
       }
     });
   });
 
-  it("removeTask удаляет задание по id", () => {
+  it("completeWeekTask и undoWeekTask отмечают шаг независимо от дня", () => {
     const state = createInitialState();
-    const task = getTaskByDay(state, 1);
+    const task = getTasksByWeek(state, 2)[0];
+    if (!task) throw new Error("expected week 2 task");
+
+    const done = completeWeekTask(state, task.id, "u-anna");
+    expect(hasCompletedTask(done, task.id, "u-anna")).toBe(true);
+
+    const undone = undoWeekTask(done, task.id, "u-anna");
+    expect(hasCompletedTask(undone, task.id, "u-anna")).toBe(false);
+  });
+
+  it("removeTask удаляет задание и его отметки", () => {
+    const state = createInitialState();
+    const task = getTasksByWeek(state, 1)[0];
     if (!task) throw new Error("expected task");
 
     const next = removeTask(state, task.id);
-    expect(getTaskByDay(next, 1)).toBeUndefined();
-  });
-
-  it("getNextFreeDay возвращает первый день без задания", () => {
-    const state = createInitialState();
-    const freeDay = getNextFreeDay(state);
-    expect(getTaskByDay(state, freeDay)).toBeUndefined();
-  });
-
-  it("getNextFreeDay возвращает последний день, если все дни заняты", () => {
-    let state = createInitialState();
-    for (let day = 1; day <= state.group.duration; day += 1) {
-      if (!getTaskByDay(state, day)) {
-        const result = addTask(state, { day, title: `Задание дня ${day}`, description: "" });
-        if ("state" in result) state = result.state;
-      }
-    }
-
-    expect(getNextFreeDay(state)).toBe(state.group.duration);
+    expect(getTasks(next).some((item) => item.id === task.id)).toBe(false);
+    expect(next.taskCompletions.some((item) => item.taskId === task.id)).toBe(false);
   });
 });

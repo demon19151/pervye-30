@@ -48,6 +48,41 @@ export function formatDelta(value: number): string {
   return `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}`;
 }
 
+/** Дата дня программы: день 1 от `programStartDate` (YYYY-MM-DD). */
+export function formatProgramDate(startDate: string | undefined, day: number): string | undefined {
+  if (!startDate || !Number.isInteger(day) || day < 1) return undefined;
+
+  const [year, month, date] = startDate.split("-").map(Number);
+  if (!year || !month || !date) return undefined;
+
+  const value = new Date(year, month - 1, date + (day - 1));
+  return value.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
+export function formatWeekRange(
+  startDate: string | undefined,
+  startDay: number,
+  endDay: number,
+): string | undefined {
+  const from = formatProgramDate(startDate, startDay);
+  const to = formatProgramDate(startDate, endDay);
+  if (!from || !to) return undefined;
+  return `${from} — ${to}`;
+}
+
+const WEEKDAY_SHORT_RU = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"] as const;
+
+/** Подписи колонок календаря: день 1 программы задаёт первый столбец. */
+export function getProgramWeekdayLabels(startDate?: string): string[] {
+  if (!startDate) return ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  const [year, month, date] = startDate.split("-").map(Number);
+  if (!year || !month || !date) return ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  const weekday = new Date(year, month - 1, date).getDay();
+  return Array.from({ length: 7 }, (_, index) => WEEKDAY_SHORT_RU[(weekday + index) % 7]);
+}
+
 export function formatTime(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });

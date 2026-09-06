@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -30,7 +31,12 @@ function clampText(s: string, max = 10_000) {
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
 
-export function BotChat({ onClose }: { onClose?: () => void }) {
+export function BotChat({
+  className,
+}: {
+  onClose?: () => void;
+  className?: string;
+}) {
   const { toast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -170,7 +176,7 @@ export function BotChat({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className="flex max-h-[70vh] min-h-[28rem] flex-col">
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
       <div className="flex-1 min-h-0 space-y-3 overflow-y-auto px-3 pt-3">
         {messages.map((m, idx) => {
           const mine = m.role === "user";

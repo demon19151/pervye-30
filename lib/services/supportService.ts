@@ -1,15 +1,6 @@
 import { createId } from "../storage";
 import type { AppState, SupportSignal, SupportSignalType } from "../types";
 
-/** Варианты, которые участник выбирает в модальном окне «Нужна поддержка». */
-export const supportOptions = [
-  "Хочу поговорить",
-  "Есть вопрос",
-  "Сейчас просто тяжело",
-] as const;
-
-export type SupportOption = (typeof supportOptions)[number];
-
 export function getActiveSignals(state: AppState): SupportSignal[] {
   return state.signals.filter((signal) => !signal.resolved);
 }
@@ -49,12 +40,12 @@ export function resolveSignalsForUser(state: AppState, userId: string): AppState
  * Снимает участника из блока «Требуют внимания» после того, как куратор реально написал.
  *
  * В отличие от {@link resolveSignalsForUser}, здесь мы:
- * - гарантируем наличие resolved-сигналов для low_mood и missed_tasks,
+ * - гарантируем наличие resolved-сигналов для missed_tasks,
  *   чтобы statsService перестал формировать предупреждения;
  * - также помечаем resolved все существующие сигналы пользователя.
  */
 export function resolveAttentionForUser(state: AppState, userId: string): AppState {
-  const typesToEnsure: SupportSignalType[] = ["manual", "low_mood", "missed_tasks"];
+  const typesToEnsure: SupportSignalType[] = ["manual", "missed_tasks"];
 
   const existingByType = new Map<SupportSignalType, boolean>();
   for (const s of state.signals) {

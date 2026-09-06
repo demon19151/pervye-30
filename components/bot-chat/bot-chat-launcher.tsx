@@ -41,7 +41,7 @@ export function BotChatLauncher() {
                 Закрыть
               </Button>
             </div>
-            <BotChat onClose={() => setOpen(false)} />
+            <BotChat className="min-h-[28rem] max-h-[70vh]" onClose={() => setOpen(false)} />
           </Card>
         </div>
       )}

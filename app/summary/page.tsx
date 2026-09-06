@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, ListChecks, Quote, Smile, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, ListChecks, Quote, Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { getCurator } from "@/lib/services/groupService";
 import { buildSummary, nextPlanGoals } from "@/lib/services/summaryService";
 import { useAppStore } from "@/lib/store/app-store";
-import { cn, formatDelta, isFeminineName } from "@/lib/utils";
+import { cn, isFeminineName } from "@/lib/utils";
 
 export default function SummaryPage() {
   return (
@@ -60,7 +60,7 @@ function Summary() {
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <StatCard
           label="Выполненных заданий"
           value={report.completedTasks}
@@ -68,17 +68,10 @@ function Summary() {
           tone="accent"
         />
         <StatCard
-          label="Активных дней"
-          value={report.activeDays}
-          icon={<CheckCircle2 className="size-4" />}
+          label="Закрытых недель"
+          value={report.closedWeeks}
+          icon={<CalendarDays className="size-4" />}
           tone="success"
-        />
-        <StatCard
-          label="Изменение настроения"
-          value={formatDelta(report.moodDelta)}
-          hint="в среднем за программу"
-          icon={<Smile className="size-4" />}
-          tone={report.moodDelta >= 0 ? "success" : "warning"}
         />
       </div>
 

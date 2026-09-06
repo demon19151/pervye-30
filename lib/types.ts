@@ -25,6 +25,8 @@ export type Group = {
   duration: number;
   /** Текущий день программы (1..duration). */
   currentDay: number;
+  /** Календарная дата дня 1, YYYY-MM-DD. День 1 = 28 августа после приказа о группах. */
+  programStartDate?: string;
   curatorId: string;
   weeklyGoal?: WeeklyGoal;
 };
@@ -35,25 +37,28 @@ export type WeeklyGoal = {
   done: number;
 };
 
+export type TaskKind = "required" | "recommended" | "question" | "status";
+
+/** Ответ на вопрос (да/нет) или выбор статуса. */
+export type TaskAnswer = "yes" | "no" | "clear" | "question" | "help";
+
 export type Task = {
   id: string;
   groupId: string;
-  day: number;
+  /** Неделя программы: 1..4 при стандартных 30 днях. */
+  week: number;
+  kind: TaskKind;
   title: string;
   description: string;
 };
 
-export type DailyCheckIn = {
+/** Отметка, что участник закрыл конкретное недельное задание. */
+export type TaskCompletion = {
   id: string;
+  taskId: string;
   userId: string;
-  day: number;
-  completed: boolean;
-  /** Настроение 1..5, 0 — ещё не указано. */
-  mood: number;
-  /** Энергия 1..5, 0 — ещё не указано. */
-  energy: number;
-  note?: string;
-  updatedAt: string;
+  createdAt: string;
+  answer?: TaskAnswer;
 };
 
 export type Message = {
@@ -78,7 +83,7 @@ export type DirectMessage = {
   createdAt: string;
 };
 
-export type SupportSignalType = "manual" | "low_mood" | "missed_tasks";
+export type SupportSignalType = "manual" | "missed_tasks";
 
 export type SupportSignal = {
   id: string;
@@ -141,7 +146,7 @@ export type AppState = {
   group: Group;
   users: User[];
   tasks: Task[];
-  checkIns: DailyCheckIn[];
+  taskCompletions: TaskCompletion[];
   messages: Message[];
   directMessages: DirectMessage[];
   signals: SupportSignal[];
@@ -164,15 +169,11 @@ export type ParticipantStats = {
   /** Выполнение программы к текущему дню, 0..100. */
   progress: number;
   currentDay: number;
-  /** Среднее настроение за последние дни, 0 — нет данных. */
-  mood: number;
-  energy: number;
-  /** Прошедшие дни без отметки о выполнении. */
+  /** Просроченные обязательные задания прошлых недель. */
   missedDays: number;
   completedTasks: number;
-  activeDays: number;
-  /** Текущая серия выполненных дней подряд. */
-  streak: number;
+  /** Недели, где закрыты все обязательные шаги. */
+  closedWeeks: number;
   activeToday: boolean;
   status: ParticipantStatus;
   warnings: Warning[];
@@ -180,7 +181,7 @@ export type ParticipantStats = {
 
 export type ParticipantStatus = "active" | "missed" | "needs_support";
 
-export type WarningReason = "missed_tasks" | "low_mood" | "manual";
+export type WarningReason = "missed_tasks" | "manual";
 
 export type Warning = {
   reason: WarningReason;
@@ -190,9 +191,7 @@ export type Warning = {
 export type SummaryReport = {
   user: User;
   completedTasks: number;
-  activeDays: number;
-  /** Изменение среднего настроения между началом и концом программы. */
-  moodDelta: number;
+  closedWeeks: number;
   achievements: Achievement[];
   curatorNote: string;
   /** true, если программа ещё не завершена и показывается предпросмотр. */

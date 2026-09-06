@@ -1,31 +1,33 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, Flame, ListChecks } from "lucide-react";
+import { ArrowRight, CalendarDays, ListChecks, TriangleAlert } from "lucide-react";
 
-import { CheckInCard } from "@/components/check-in-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ProgressBar } from "@/components/progress-bar";
-import { SupportRequestCard } from "@/components/support-request-card";
-import { SupportSignalModal } from "@/components/support-signal-modal";
-import { TaskCard } from "@/components/task-card";
+import { WeekTasksCard } from "@/components/week-tasks-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import {
-  completeTask,
-  getCheckIn,
-  getParticipantDay,
-  saveDay,
-  undoTask,
-} from "@/lib/services/checkInService";
+import { getParticipantDay } from "@/lib/services/groupService";
 import { getParticipantStats } from "@/lib/services/statsService";
-import { getSignalsForUser, sendSupportSignal } from "@/lib/services/supportService";
-import { getTaskByDay } from "@/lib/services/taskService";
+import { sendSupportSignal } from "@/lib/services/supportService";
+import {
+  completeWeekTask,
+  getAnswerLabel,
+  getProgramWeek,
+  getTasksByWeek,
+  getWeekBounds,
+  hasCompletedTask,
+  isRequiredTask,
+  needsCuratorAttention,
+  undoWeekTask,
+} from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
-import { pluralize } from "@/lib/utils";
+import type { TaskAnswer } from "@/lib/types";
+import { formatWeekRange, pluralize } from "@/lib/utils";
 
 export default function ParticipantPage() {
   return (
@@ -38,41 +40,50 @@ export default function ParticipantPage() {
 function ParticipantDashboard() {
   const { state, currentUser, update } = useAppStore();
   const { toast } = useToast();
-  const [supportOpen, setSupportOpen] = useState(false);
 
   if (!state || !currentUser) return null;
 
   const day = getParticipantDay(state, currentUser.id);
-  const task = getTaskByDay(state, day);
-  const checkIn = getCheckIn(state, currentUser.id, day);
+  const week = getProgramWeek(day, state.group.duration);
+  const weekTasks = getTasksByWeek(state, week);
+  const overdueTasks = state.tasks.filter(
+    (task) =>
+      isRequiredTask(task) &&
+      task.week < week &&
+      !hasCompletedTask(state, task.id, currentUser.id),
+  );
+  const myCompletions = (state.taskCompletions ?? []).filter(
+    (item) => item.userId === currentUser.id,
+  );
+  const completedIds = new Set(myCompletions.map((item) => item.taskId));
+  const answers = Object.fromEntries(myCompletions.map((item) => [item.taskId, item.answer]));
+  const weekBounds = getWeekBounds(week, state.group.duration);
   const stats = getParticipantStats(state, currentUser.id);
-  const pendingSignal = getSignalsForUser(state, currentUser.id).some((signal) => !signal.resolved);
 
-  const completed = Boolean(checkIn?.completed);
   const timelineProgress = (day / state.group.duration) * 100;
 
-  const handleComplete = () => {
-    update((current) => completeTask(current, currentUser.id, day));
-    toast("Задание выполнено! Отличный шаг 👏");
+  const handleComplete = (taskId: string) => {
+    update((current) => completeWeekTask(current, taskId, currentUser.id));
+    toast("Шаг закрыт. Отличный ход 👏");
   };
 
-  const handleUndo = () => {
-    update((current) => undoTask(current, currentUser.id, day));
-    toast("Отметка снята", "info");
-  };
-
-  const handleSaveDay = (input: { mood: number; energy: number; note: string }) => {
+  const handleAnswer = (taskId: string, answer: TaskAnswer) => {
+    const task = state.tasks.find((item) => item.id === taskId);
     update((current) => {
-      const result = saveDay(current, currentUser.id, day, input);
-      return "error" in result ? current : result.state;
+      const next = completeWeekTask(current, taskId, currentUser.id, answer);
+      if (!needsCuratorAttention(answer) || !task) return next;
+      return sendSupportSignal(next, currentUser.id, `${task.title}: ${getAnswerLabel(answer)}`);
     });
-    toast("День сохранён");
+    toast(
+      needsCuratorAttention(answer)
+        ? "Ответ сохранён. Куратор увидит, что нужна помощь."
+        : "Ответ сохранён",
+    );
   };
 
-  const handleSupport = (option: string) => {
-    update((current) => sendSupportSignal(current, currentUser.id, option));
-    setSupportOpen(false);
-    toast("Куратор получил сигнал");
+  const handleUndo = (taskId: string) => {
+    update((current) => undoWeekTask(current, taskId, currentUser.id));
+    toast("Отметка снята", "info");
   };
 
   return (
@@ -103,24 +114,21 @@ function ParticipantDashboard() {
 
       <div className="grid gap-5 lg:grid-cols-5">
         <div className="space-y-5 lg:col-span-3">
-          <TaskCard
-            task={task}
-            day={day}
-            completed={completed}
+          <WeekTasksCard
+            week={week}
+            rangeLabel={formatWeekRange(
+              state.group.programStartDate,
+              weekBounds.start,
+              weekBounds.end,
+            )}
+            tasks={weekTasks}
+            overdueTasks={overdueTasks}
+            completedIds={completedIds}
+            answers={answers}
             onComplete={handleComplete}
+            onAnswer={handleAnswer}
             onUndo={handleUndo}
           />
-
-          <CheckInCard
-            key={`${currentUser.id}-${day}`}
-            initialMood={checkIn?.mood ?? 0}
-            initialEnergy={checkIn?.energy ?? 0}
-            initialNote={checkIn?.note ?? ""}
-            saved={Boolean(checkIn?.mood && checkIn?.energy)}
-            onSave={handleSaveDay}
-          />
-
-          <SupportRequestCard pending={pendingSignal} onOpen={() => setSupportOpen(true)} />
         </div>
 
         <div className="space-y-5 lg:col-span-2">
@@ -151,7 +159,7 @@ function ParticipantDashboard() {
                 className="mt-4"
               />
 
-              <div className="mt-5 grid grid-cols-3 gap-2.5">
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
                 <MiniStat
                   label="Выполнено заданий"
                   value={stats.completedTasks}
@@ -159,15 +167,9 @@ function ParticipantDashboard() {
                   tone="accent"
                 />
                 <MiniStat
-                  label="Активных дней"
-                  value={stats.activeDays}
-                  icon={<CheckCircle2 className="size-4" />}
-                  tone="success"
-                />
-                <MiniStat
-                  label="Текущая серия"
-                  value={stats.streak}
-                  icon={<Flame className="size-4" />}
+                  label="Просрочено"
+                  value={stats.missedDays}
+                  icon={<TriangleAlert className="size-4" />}
                   tone="warning"
                 />
               </div>
@@ -184,12 +186,6 @@ function ParticipantDashboard() {
           </div>
         </div>
       </div>
-
-      <SupportSignalModal
-        open={supportOpen}
-        onClose={() => setSupportOpen(false)}
-        onSubmit={handleSupport}
-      />
     </div>
   );
 }

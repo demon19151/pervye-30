@@ -1,8 +1,8 @@
 import { curatorSummaryNote, SUMMARY_PREVIEW } from "../mockData";
-import { average, isFeminineName } from "../utils";
+import { isFeminineName } from "../utils";
 import type { Achievement, AppState, SummaryReport } from "../types";
-import { getCheckIns } from "./checkInService";
 import { getParticipantStats } from "./statsService";
+import { getTasksByWeek, hasCompletedTask } from "./taskService";
 
 /**
  * Итоговый отчёт за 30 дней.
@@ -15,21 +15,12 @@ export function buildSummary(state: AppState, userId: string): SummaryReport | n
   const stats = getParticipantStats(state, userId);
   if (!stats) return null;
 
-  const checkIns = getCheckIns(state, userId);
   const preview = state.group.currentDay < state.group.duration;
-
-  const firstHalf = checkIns.slice(0, Math.max(1, Math.ceil(checkIns.length / 2)));
-  const secondHalf = checkIns.slice(Math.ceil(checkIns.length / 2));
-
-  const realDelta =
-    average(secondHalf.map((item) => item.mood).filter(Boolean)) -
-    average(firstHalf.map((item) => item.mood).filter(Boolean));
 
   return {
     user: stats.user,
     completedTasks: preview ? SUMMARY_PREVIEW.completedTasks : stats.completedTasks,
-    activeDays: preview ? SUMMARY_PREVIEW.activeDays : stats.activeDays,
-    moodDelta: preview ? SUMMARY_PREVIEW.moodDelta : Math.round(realDelta * 10) / 10,
+    closedWeeks: preview ? SUMMARY_PREVIEW.closedWeeks : stats.closedWeeks,
     achievements: buildAchievements(state, userId),
     curatorNote: curatorSummaryNote(isFeminineName(stats.user.name)),
     preview,
@@ -38,22 +29,23 @@ export function buildSummary(state: AppState, userId: string): SummaryReport | n
 
 function buildAchievements(state: AppState, userId: string): Achievement[] {
   const stats = getParticipantStats(state, userId);
-  const checkIns = getCheckIns(state, userId);
-  const completedDays = checkIns.filter((item) => item.completed).map((item) => item.day);
+  const week1 = getTasksByWeek(state, 1);
+  const firstWeekDone =
+    week1.length > 0 && week1.every((task) => hasCompletedTask(state, task.id, userId));
+  const askedCurator = (state.directMessages ?? []).some((message) => message.fromUserId === userId);
 
-  const firstWeekDone = [1, 2, 3, 4, 5, 6, 7].every((day) => completedDays.includes(day));
-  const noteWritten = checkIns.some((item) => Boolean(item.note));
-  const helpedSomeone = state.messages.some(
-    (message) => message.userId === userId && Object.keys(message.reactions).length > 0,
-  );
-
-  // Формулировки без рода — одинаково подходят любому участнику.
   return [
     { id: "first-week", title: "Первая неделя пройдена", unlocked: firstWeekDone },
-    { id: "streak-5", title: "5 дней подряд без пропусков", unlocked: (stats?.streak ?? 0) >= 5 },
-    { id: "feedback", title: "Первая обратная связь получена", unlocked: noteWritten },
-    { id: "support", title: "Поддержка участнику группы", unlocked: helpedSomeone },
+    { id: "week-closed", title: "Закрыта хотя бы одна неделя", unlocked: (stats?.closedWeeks ?? 0) > 0 },
+    { id: "question", title: "Задан вопрос куратору", unlocked: askedCurator },
+    { id: "support", title: "Поддержка участнику группы", unlocked: helpedSomeone(state, userId) },
   ];
+}
+
+function helpedSomeone(state: AppState, userId: string): boolean {
+  return state.messages.some(
+    (message) => message.userId === userId && Object.keys(message.reactions).length > 0,
+  );
 }
 
 export const nextPlanGoals = [

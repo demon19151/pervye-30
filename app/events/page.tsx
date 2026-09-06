@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Clock, MapPin, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Check, Clock, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { ProgramWeekCalendar } from "@/components/program-week-calendar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -16,13 +17,12 @@ import {
   cancelCalendarEventResponse,
   getCalendarEvents,
   getCalendarEventsByDay,
-  getEventResponses,
   hasRespondedToEvent,
   removeCalendarEvent,
   respondToCalendarEvent,
   upsertCalendarEvent,
 } from "@/lib/services/calendarEventsService";
-import type { AppState, CalendarEvent } from "@/lib/types";
+import type { CalendarEvent } from "@/lib/types";
 
 export default function EventsPage() {
   return (
@@ -139,13 +139,13 @@ function EventsCalendar() {
   const onRespond = (eventId: string) => {
     if (isCurator) return;
     update((current) => respondToCalendarEvent(current, eventId, currentUser.id));
-    toast.toast("Отклик отправлен.", "success");
+    toast.toast("Записал тебя.", "success");
   };
 
   const onCancelResponse = (eventId: string) => {
     if (isCurator) return;
     update((current) => cancelCalendarEventResponse(current, eventId, currentUser.id));
-    toast.toast("Отклик отменён.", "info");
+    toast.toast("Ок, не идёшь.", "info");
   };
 
   return (
@@ -153,9 +153,11 @@ function EventsCalendar() {
       <PageHeader
         title="Мероприятия"
         subtitle={
-          isCurator
-            ? "Нажми на день, чтобы добавить ещё одно мероприятие. В один день можно несколько событий."
-            : "Нажми на день или откликнись на мероприятие. Уведомление исчезнет после отклика."
+          duration === 30
+            ? "30 дней программы · четыре полные недели и пятая — 2 дня."
+            : isCurator
+              ? "Нажми на день, чтобы добавить ещё одно мероприятие."
+              : "Нажми на день или напиши, что пойдёшь."
         }
         action={
           isCurator ? (
@@ -167,93 +169,76 @@ function EventsCalendar() {
         }
       />
 
-      <Card className="overflow-visible p-5 sm:p-6">
-        <div className="grid grid-cols-6 gap-2 overflow-visible sm:grid-cols-10">
-          {Array.from({ length: duration }, (_, index) => index + 1).map((dayNumber) => {
-            const dayEvents = getCalendarEventsByDay(state, dayNumber);
-            const hasEvent = dayEvents.length > 0;
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
+        <Card className="overflow-visible rounded-2xl p-4 sm:p-5">
+          <ProgramWeekCalendar
+            duration={duration}
+            startDate={state.group.programStartDate}
+            renderDay={(dayNumber) => (
+              <CalendarDayCell
+                dayNumber={dayNumber}
+                events={getCalendarEventsByDay(state, dayNumber)}
+                isToday={dayNumber === state.group.currentDay}
+                onOpen={() => openDay(dayNumber)}
+              />
+            )}
+          />
 
-            return (
-              <div
-                key={dayNumber}
-                role="button"
-                tabIndex={0}
-                onClick={() => openDay(dayNumber)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openDay(dayNumber);
-                  }
-                }}
-                className={cn(
-                  "relative flex aspect-square cursor-pointer items-center justify-center rounded-xl text-[13px] font-semibold tabular-nums ring-1 ring-inset transition-colors hover:ring-2 hover:ring-[#6d55f5]",
-                  hasEvent
-                    ? "bg-[#6d55f5] text-white ring-[#6d55f5] shadow-accent"
-                    : "bg-surface-muted text-subtle ring-line",
-                )}
-              >
-                <span>{dayNumber}</span>
-                {dayEvents.length > 1 ? (
-                  <span className="absolute right-1 top-1 rounded-full bg-white/90 px-1 text-[9px] font-bold leading-4 text-[#6d55f5]">
-                    {dayEvents.length}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[3px] bg-accent" aria-hidden />
+              день с мероприятием
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[3px] bg-accent-soft ring-2 ring-inset ring-accent" aria-hidden />
+              сегодня
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[3px] bg-[#f3f2f8] ring-1 ring-inset ring-line" aria-hidden />
+              обычный день
+            </span>
+          </div>
+        </Card>
 
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-[#6d55f5]" aria-hidden />
-            день с мероприятиями
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-surface-muted ring-1 ring-inset ring-line" aria-hidden />
-            обычный день
-          </span>
-        </div>
-      </Card>
-
-      {events.length > 0 ? (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden p-4 sm:p-5">
-              <div className="flex items-start gap-3">
-                <EventDetails
-                  event={event}
-                  responses={responseNames(state, event.id)}
-                  className="min-w-0 flex-1"
-                />
-                {isCurator ? (
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    <Button variant="outline" size="sm" onClick={() => openEdit(event)}>
-                      <Pencil className="size-3.5" />
-                      Изменить
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => onDelete(event.id)}>
-                      <Trash2 className="size-3.5" />
-                      Удалить
-                    </Button>
-                  </div>
-                ) : (
-                  <RespondButton
-                    responded={hasRespondedToEvent(state, event.id, currentUser.id)}
-                    onRespond={() => onRespond(event.id)}
-                    onCancel={() => onCancelResponse(event.id)}
+        {events.length > 0 ? (
+          <div className="space-y-3">
+            {events.map((event) => (
+              <Card key={event.id} className="overflow-hidden p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <EventDetails
+                    event={event}
+                    className="min-w-0 flex-1"
                   />
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted">
-          {isCurator
-            ? "Пока нет мероприятий. Нажми на день в календаре, чтобы добавить первое."
-            : "Куратор ещё не добавил мероприятия в календарь."}
-        </p>
-      )}
+                  {isCurator ? (
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(event)}>
+                        <Pencil className="size-3.5" />
+                        Изменить
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => onDelete(event.id)}>
+                        <Trash2 className="size-3.5" />
+                        Удалить
+                      </Button>
+                    </div>
+                  ) : (
+                    <RespondButton
+                      responded={hasRespondedToEvent(state, event.id, currentUser.id)}
+                      onRespond={() => onRespond(event.id)}
+                      onCancel={() => onCancelResponse(event.id)}
+                    />
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted lg:pt-2">
+            {isCurator
+              ? "Пока нет мероприятий. Нажми на день в календаре, чтобы добавить первое."
+              : "Куратор ещё не добавил мероприятия в календарь."}
+          </p>
+        )}
+      </div>
 
       <Modal
         open={infoDay !== null}
@@ -278,7 +263,6 @@ function EventsCalendar() {
                   <EventDetails
                     event={event}
                     hideDay
-                    responses={responseNames(state, event.id)}
                     className="min-w-0 flex-1"
                   />
                   {isCurator ? null : (
@@ -408,10 +392,57 @@ function EventsCalendar() {
   );
 }
 
-function responseNames(state: AppState, eventId: string): string[] {
-  return getEventResponses(state, eventId)
-    .map((item) => state.users.find((user) => user.id === item.userId)?.name)
-    .filter((name): name is string => Boolean(name));
+function shortEventLabel(title: string) {
+  const word = title.trim().split(/\s+/)[0] ?? title;
+  return word.length > 11 ? `${word.slice(0, 10)}…` : word;
+}
+
+function CalendarDayCell({
+  dayNumber,
+  events,
+  isToday,
+  onOpen,
+}: {
+  dayNumber: number;
+  events: CalendarEvent[];
+  isToday: boolean;
+  onOpen: () => void;
+}) {
+  const hasEvent = events.length > 0;
+  const eventLabel = hasEvent ? shortEventLabel(events[0].title) : null;
+  const label = hasEvent
+    ? `День ${dayNumber}: ${events.map((event) => event.title).join(", ")}`
+    : isToday
+      ? `День ${dayNumber}, сегодня`
+      : `День ${dayNumber}`;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={label}
+      className={cn(
+        "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-xl text-[12px] font-semibold tabular-nums transition-colors sm:text-[13px]",
+        hasEvent && "bg-accent text-white hover:bg-accent-strong",
+        !hasEvent && !isToday && "bg-[#f3f2f8] text-foreground ring-1 ring-inset ring-line hover:ring-accent",
+        !hasEvent && isToday && "bg-accent-soft text-accent ring-2 ring-inset ring-accent hover:bg-accent-soft",
+      )}
+    >
+      <span>{dayNumber}</span>
+      {hasEvent ? (
+        <span className="hidden max-w-[90%] truncate px-0.5 text-[9px] font-medium leading-none text-white sm:block">
+          {eventLabel}
+        </span>
+      ) : isToday ? (
+        <span className="hidden text-[9px] font-medium leading-none sm:block">сегодня</span>
+      ) : null}
+      {events.length > 1 ? (
+        <span className="absolute right-0 top-0 rounded-full bg-white/90 px-1 text-[8px] font-bold leading-3 text-accent">
+          {events.length}
+        </span>
+      ) : null}
+    </button>
+  );
 }
 
 function RespondButton({
@@ -427,14 +458,14 @@ function RespondButton({
     return (
       <Button variant="secondary" size="sm" className="shrink-0" onClick={onCancel}>
         <Check className="size-3.5" />
-        Вы откликнулись
+        Я иду
       </Button>
     );
   }
 
   return (
     <Button size="sm" className="shrink-0" onClick={onRespond}>
-      Откликнуться
+      Пойду
     </Button>
   );
 }
@@ -442,12 +473,10 @@ function RespondButton({
 function EventDetails({
   event,
   hideDay = false,
-  responses = [],
   className,
 }: {
   event: CalendarEvent;
   hideDay?: boolean;
-  responses?: string[];
   className?: string;
 }) {
   return (
@@ -482,14 +511,6 @@ function EventDetails({
       ) : null}
       {event.description ? (
         <p className="break-all text-[14px] leading-relaxed text-muted [overflow-wrap:anywhere]">{event.description}</p>
-      ) : null}
-      {responses.length > 0 ? (
-        <p className="flex items-start gap-1.5 text-[13px] text-muted">
-          <Users className="mt-0.5 size-3.5 shrink-0" />
-          <span className="min-w-0 break-all [overflow-wrap:anywhere]">
-            Откликнулись ({responses.length}): {responses.join(", ")}
-          </span>
-        </p>
       ) : null}
     </div>
   );

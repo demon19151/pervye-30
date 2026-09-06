@@ -97,6 +97,31 @@ export type Announcement = {
   createdAt: string;
 };
 
+export type CalendarEventView = {
+  userId: string;
+  /** Когда участник последний раз открывал вкладку «Мероприятия». */
+  lastSeenAt: string;
+};
+
+export type CalendarEvent = {
+  id: string;
+  groupId: string;
+  /** День программы: 1..duration. */
+  day: number;
+  /** Время в формате HH:mm (например, 10:00). */
+  time: string;
+  /** Название мероприятия. */
+  title: string;
+  /** Место (опционально). */
+  location?: string;
+  /** Ссылка (опционально). */
+  link?: string;
+  /** Краткое описание. */
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Achievement = {
   id: string;
   title: string;
@@ -114,6 +139,8 @@ export type AppState = {
   directMessages: DirectMessage[];
   signals: SupportSignal[];
   announcements: Announcement[];
+  calendarEvents: CalendarEvent[];
+  calendarEventViews: CalendarEventView[];
   /** Кто сейчас в системе. null — не авторизован. */
   session: Session | null;
 };

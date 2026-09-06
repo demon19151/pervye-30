@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "success" | "outline" | "warning";
+type Variant = "primary" | "secondary" | "ghost" | "success" | "outline" | "warning" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
@@ -19,6 +19,7 @@ const variants: Record<Variant, string> = {
     "bg-surface text-foreground ring-1 ring-inset ring-line hover:bg-surface-muted hover:ring-accent-ring disabled:text-subtle",
   ghost: "bg-transparent text-muted hover:bg-accent-soft/70 hover:text-accent-strong",
   warning: "bg-warning text-white hover:brightness-95",
+  danger: "bg-danger text-white hover:brightness-95",
 };
 
 const sizes: Record<Size, string> = {

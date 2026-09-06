@@ -13,12 +13,14 @@ export function Sidebar({
   items,
   user,
   subtitle,
+  badges,
   onNavigate,
   className,
 }: {
   items: NavItem[];
   user: User;
   subtitle?: string;
+  badges?: Record<string, number>;
   onNavigate?: () => void;
   className?: string;
 }) {
@@ -32,6 +34,7 @@ export function Sidebar({
         {items.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
+          const badge = badges?.[item.href] ?? 0;
 
           return (
             <Link
@@ -47,7 +50,15 @@ export function Sidebar({
               )}
             >
               <Icon className={cn("size-[18px] shrink-0", active ? "text-accent" : "text-subtle")} />
-              {item.label}
+              <span className="min-w-0 flex-1">{item.label}</span>
+              {badge > 0 ? (
+                <span
+                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
+                  aria-label={`${badge} новых мероприятий`}
+                >
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}

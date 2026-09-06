@@ -1,6 +1,7 @@
 import type {
   Announcement,
   AppState,
+  CalendarEvent,
   DailyCheckIn,
   DirectMessage,
   Group,
@@ -299,7 +300,7 @@ export function curatorSummaryNote(feminine: boolean): string {
   return `Ты хорошо ${feminine ? "вошла" : "вошёл"} в ритм команды. Особенно заметно, как изменилось твоё понимание процессов за последний месяц.`;
 }
 
-export const STATE_VERSION = 5;
+export const STATE_VERSION = 6;
 
 /** Собирает полный демонстрационный снимок состояния. */
 export function createInitialState(now: Date = new Date()): AppState {
@@ -313,6 +314,21 @@ export function createInitialState(now: Date = new Date()): AppState {
     directMessages: buildDirectMessages(now),
     signals: buildSignals(now),
     announcements: buildAnnouncements(now),
+    calendarEventViews: [],
+    calendarEvents: [
+      {
+        id: "ce-1",
+        groupId: GROUP_ID,
+        day: 4,
+        time: "10:00",
+        title: "Хакатон",
+        location: "Онлайн (пример)",
+        link: "https://example.com/hackathon",
+        description: "Тестовое мероприятие: короткий хакатон с командной работой. Уточни детали по ссылке.",
+        createdAt: new Date(now.getTime() - 3 * 24 * 60_000).toISOString(),
+        updatedAt: new Date(now.getTime() - 24 * 60_000).toISOString(),
+      },
+    ],
     session: null,
   };
 }

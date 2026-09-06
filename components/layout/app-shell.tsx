@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/ui/states";
 import { navForRole } from "@/lib/navigation";
+import { getUnseenCalendarEventCount } from "@/lib/services/calendarEventsService";
 import { switchRole } from "@/lib/services/groupService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { UserRole } from "@/lib/types";
@@ -69,11 +70,14 @@ export function AppShell({
 
   const items = navForRole(currentUser.role);
   const subtitle = currentUser.role === "curator" ? "Панель куратора" : state.group.name;
+  const eventBadge =
+    currentUser.role === "participant" ? getUnseenCalendarEventCount(state, currentUser.id) : 0;
+  const navBadges = eventBadge > 0 ? { "/events": eventBadge } : undefined;
 
   return (
     <div className="min-h-dvh">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line lg:block">
-        <Sidebar items={items} user={currentUser} subtitle={subtitle} />
+        <Sidebar items={items} user={currentUser} subtitle={subtitle} badges={navBadges} />
       </aside>
 
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md lg:hidden">
@@ -110,6 +114,7 @@ export function AppShell({
                 items={items}
                 user={currentUser}
                 subtitle={subtitle}
+                badges={navBadges}
                 onNavigate={() => setDrawerOpen(false)}
                 className="h-full"
               />

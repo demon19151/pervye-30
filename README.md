@@ -174,6 +174,16 @@ lib/
 
 ---
 
+## AI-агент (ИИ Помощник)
+
+В проект добавлен чат-виджет **«ИИ Помощник»** (справа снизу) для роли `participant`. Он отвечает на вопросы про учебу/университет на основе базы знаний из `knowledge/*.md`.
+
+- UI виджета: `components/bot-chat/*`
+- API endpoint: `POST /api/bot-chat`
+- Документация: `AI_AGENT_DOCS.md`
+
+В Vercel необходимо задать env-переменные для LLM (см. `AI_AGENT_DOCS.md`).
+
 ## Технологии
 
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Lucide Icons.

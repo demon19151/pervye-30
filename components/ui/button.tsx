@@ -10,16 +10,19 @@ type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-accent text-white shadow-accent hover:bg-accent-strong active:bg-accent-strong disabled:bg-accent/40 disabled:shadow-none",
+    "bg-accent text-white shadow-accent hover:bg-accent-strong active:scale-[0.98] active:bg-accent-strong disabled:bg-accent/40 disabled:shadow-none disabled:active:scale-100",
   secondary:
-    "bg-accent-soft text-accent-strong hover:bg-accent-ring/60 disabled:bg-accent-soft/60 disabled:text-accent/50",
+    "bg-accent-soft text-accent-strong hover:bg-accent-ring/60 active:scale-[0.98] active:bg-accent-ring/80 disabled:bg-accent-soft/60 disabled:text-accent/50 disabled:active:scale-100",
   success:
-    "bg-success-soft text-success-strong ring-1 ring-inset ring-success/25 hover:bg-success/15",
+    "bg-success-soft text-success-strong ring-1 ring-inset ring-success/30 hover:bg-success/15 active:scale-[0.98] active:bg-success/20 disabled:bg-success-soft/60 disabled:text-success/50 disabled:active:scale-100",
   outline:
-    "bg-surface text-foreground ring-1 ring-inset ring-line hover:bg-surface-muted hover:ring-accent-ring disabled:text-subtle",
-  ghost: "bg-transparent text-muted hover:bg-accent-soft/70 hover:text-accent-strong",
-  warning: "bg-warning text-white hover:brightness-95",
-  danger: "bg-danger text-white hover:brightness-95",
+    "bg-surface text-foreground ring-1 ring-inset ring-line hover:bg-surface-muted hover:ring-accent-ring active:scale-[0.98] active:bg-surface-muted disabled:text-subtle disabled:active:scale-100",
+  ghost:
+    "bg-transparent text-muted hover:bg-accent-soft/70 hover:text-accent-strong active:scale-[0.98] active:bg-accent-soft disabled:text-subtle disabled:active:scale-100",
+  warning:
+    "bg-warning text-white hover:brightness-95 active:scale-[0.98] active:brightness-90 disabled:bg-warning/40 disabled:active:scale-100",
+  danger:
+    "bg-danger text-white hover:brightness-95 active:scale-[0.98] active:brightness-90 disabled:bg-danger/40 disabled:active:scale-100",
 };
 
 const sizes: Record<Size, string> = {

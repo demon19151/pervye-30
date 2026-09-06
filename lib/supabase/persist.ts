@@ -320,6 +320,7 @@ export async function fetchState(preferredGroupId?: string): Promise<AppState> {
   if (!groupId) {
     const fresh = createInitialState();
     await persistState(emptyRelatedState(fresh), fresh);
+    await seedDemoAccounts();
     return { ...fresh, session: loadSession() };
   }
 
@@ -488,5 +489,13 @@ export async function resetRemoteState(): Promise<AppState> {
     { ...fresh, session: null },
   );
   saveSession(null);
+  await seedDemoAccounts();
   return { ...fresh, session: null };
+}
+
+/** Снова вешает логины Анны, Максима, Ирины и Дмитрия после сброса. */
+async function seedDemoAccounts(): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db.rpc("seed_demo_accounts");
+  throwIfError(error, "seed demo accounts");
 }

@@ -27,6 +27,13 @@ function mapProfile(row: AccountRow): AccountProfile {
   };
 }
 
+function firstAccountRow(data: unknown): AccountRow | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return (data[0] as AccountRow | undefined) ?? null;
+  if (typeof data === "object" && "user_id" in data) return data as AccountRow;
+  return null;
+}
+
 function throwAccountError(error: { message?: string; details?: string; hint?: string } | null): never | void {
   if (error) throw new Error(accountErrorMessage(error));
 }
@@ -50,7 +57,7 @@ export async function registerAccount(input: {
 
   throwAccountError(error);
 
-  const row = (data as AccountRow[] | null)?.[0];
+  const row = firstAccountRow(data);
   if (!row) throw new Error("Не удалось создать аккаунт.");
   return mapProfile(row);
 }
@@ -81,9 +88,21 @@ export async function signInAccount(input: {
 
   throwAccountError(error);
 
-  const row = (data as AccountRow[] | null)?.[0];
+  const row = firstAccountRow(data);
   if (!row) throw new Error("Неверный логин или пароль.");
   return mapProfile(row);
+}
+
+export async function ensureDemoAccounts(): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db.rpc("ensure_demo_accounts");
+  throwAccountError(error);
+}
+
+export async function seedDemoAccounts(): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db.rpc("seed_demo_accounts");
+  throwAccountError(error);
 }
 
 export async function loadAccountState(profile: AccountProfile): Promise<AppState> {

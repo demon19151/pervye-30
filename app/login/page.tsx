@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { DEMO_ACCOUNTS } from "@/lib/demoAccounts";
+import { DEMO_ACCOUNTS, findDemoAccount, type DemoAccount } from "@/lib/demoAccounts";
 import { homeForRole } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -20,10 +20,10 @@ import {
   validatePassword,
 } from "@/lib/services/accountService";
 import { useAppStore } from "@/lib/store/app-store";
-import { loadAccountState, signInAccount } from "@/lib/supabase/accounts";
+import { ensureDemoAccounts, loadAccountState, seedDemoAccounts, signInAccount } from "@/lib/supabase/accounts";
 
 export default function LoginPage() {
-  const { ready, error: storeError, hydrate } = useAppStore();
+  const { ready, hydrate } = useAppStore();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -31,9 +31,67 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activeDemo, setActiveDemo] = useState<string | null>(null);
+  const [demoReady, setDemoReady] = useState(false);
+  const requestRef = useRef(0);
+  const inFlightRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void ensureDemoAccounts()
+      .catch(() => seedDemoAccounts())
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setDemoReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const enter = async (nextLogin: string, nextPassword: string, retryDemo = false) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    const requestId = ++requestRef.current;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      let profile;
+      try {
+        profile = await signInAccount({ login: nextLogin, password: nextPassword });
+      } catch (cause) {
+        if (!retryDemo) throw cause;
+        await seedDemoAccounts();
+        if (requestRef.current !== requestId) return;
+        profile = await signInAccount({ login: nextLogin, password: nextPassword });
+      }
+      if (requestRef.current !== requestId) return;
+      hydrate(await loadAccountState(profile));
+      if (requestRef.current !== requestId) return;
+      toast(`С возвращением, ${profile.name}!`);
+      router.push(homeForRole(profile.role));
+    } catch (cause) {
+      if (requestRef.current !== requestId) return;
+      setError(accountErrorMessage(cause));
+    } finally {
+      if (requestRef.current === requestId) {
+        inFlightRef.current = false;
+        setSubmitting(false);
+      }
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (inFlightRef.current) return;
+
+    const demo = findDemoAccount(login);
+    if (demo) {
+      setActiveDemo(demo.login);
+      await enter(demo.login, demo.password, true);
+      return;
+    }
 
     const problem = validateLogin(login) ?? validatePassword(password);
     if (problem) {
@@ -41,19 +99,14 @@ export default function LoginPage() {
       return;
     }
 
-    setSubmitting(true);
-    setError(null);
+    setActiveDemo(null);
+    await enter(login, password);
+  };
 
-    try {
-      const profile = await signInAccount({ login, password });
-      hydrate(await loadAccountState(profile));
-      toast(`С возвращением, ${profile.name}!`);
-      router.push(homeForRole(profile.role));
-    } catch (cause) {
-      setError(accountErrorMessage(cause));
-    } finally {
-      setSubmitting(false);
-    }
+  const handleDemo = (account: DemoAccount) => {
+    if (inFlightRef.current) return;
+    setActiveDemo(account.login);
+    void enter(account.login, account.password, true);
   };
 
   return (
@@ -64,20 +117,17 @@ export default function LoginPage() {
       </div>
 
       <Card className="p-5 sm:p-7">
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div className="mb-5 space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {DEMO_ACCOUNTS.map((account) => (
               <button
                 key={account.login}
                 type="button"
-                onClick={() => {
-                  setLogin(account.login);
-                  setPassword(account.password);
-                  setError(null);
-                }}
+                disabled={!ready || !demoReady || submitting}
+                onClick={() => handleDemo(account)}
                 className={cn(
-                  "cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                  login === account.login
+                  "cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-wait",
+                  activeDemo === account.login
                     ? "bg-accent-soft text-accent-strong"
                     : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
                 )}
@@ -86,15 +136,17 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
-          <p className="text-[13px] text-muted">Нажмите имя — логин и пароль подставятся сами.</p>
+          <p className="text-[13px] text-muted">Нажмите имя — войдёте сразу, без ввода пароля.</p>
+        </div>
 
+        <form onSubmit={(event) => void handleSubmit(event)} className="space-y-5" autoComplete="off" noValidate>
           <Field label="Логин" htmlFor="login-username">
             <Input
               id="login-username"
               value={login}
               onChange={(event) => setLogin(sanitizeLogin(event.target.value))}
               placeholder="olga_k"
-              autoComplete="username"
+              autoComplete="off"
               maxLength={24}
               autoFocus
             />
@@ -107,18 +159,18 @@ export default function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="off"
               maxLength={72}
             />
           </Field>
 
-          {(error || storeError) && (
+          {error && (
             <p className="rounded-2xl bg-danger-soft px-4 py-3 text-[13px] text-danger" role="alert">
-              {error ?? storeError}
+              {error}
             </p>
           )}
 
-          <Button type="submit" size="lg" fullWidth loading={submitting && !error} disabled={!ready}>
+          <Button type="submit" size="lg" fullWidth loading={submitting} disabled={!ready || !demoReady}>
             <LogIn className="size-5" />
             Войти
           </Button>

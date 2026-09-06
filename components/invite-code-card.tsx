@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Check, Copy, KeyRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,12 @@ export function InviteCodeCard({
   code,
   description = "Отправьте код участникам — по нему они войдут в группу.",
   className,
+  footer,
 }: {
   code: string;
   description?: string;
   className?: string;
+  footer?: ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -41,15 +44,13 @@ export function InviteCodeCard({
           </p>
           <p className="mt-2.5 text-[13px] text-muted">{description}</p>
 
-          <Button
-            variant={copied ? "success" : "outline"}
-            size="sm"
-            className="mt-4"
-            onClick={handleCopy}
-          >
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied ? "Скопировано" : "Скопировать код"}
-          </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant={copied ? "success" : "outline"} size="sm" onClick={handleCopy}>
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied ? "Скопировано" : "Скопировать код"}
+            </Button>
+            {footer}
+          </div>
         </div>
       </div>
     </Card>

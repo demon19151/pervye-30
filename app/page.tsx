@@ -56,9 +56,14 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Brand />
           <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                Войти
+              </Button>
+            </Link>
             <Link href="/join">
               <Button variant="ghost" size="sm">
-                Войти по коду
+                По коду
               </Button>
             </Link>
             <Link href="/create-group" className="hidden sm:block">
@@ -97,7 +102,7 @@ export default function LandingPage() {
                 </Link>
                 <Link href="/join" className="sm:w-auto">
                   <Button variant="outline" size="lg" fullWidth className="sm:w-auto sm:min-w-48">
-                    Войти по коду
+                    По коду
                   </Button>
                 </Link>
               </div>

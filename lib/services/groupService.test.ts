@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState, DEMO_INVITE_CODE, CURATOR_ID } from "../mockData";
+import { getProgramTaskTemplates } from "../mockData";
 import {
   createGroup,
+  createRoom,
   getCurator,
   getCurrentUser,
   getParticipantDay,
   getParticipants,
   isValidInviteCode,
   joinGroup,
+  rotateInviteCode,
   setCurrentUser,
   signOut,
   switchRole,
@@ -115,11 +118,44 @@ describe("groupService", () => {
     expect(getCurator(state)?.id).toBe(CURATOR_ID);
   });
 
-  it("createGroup обновляет параметры группы", () => {
+  it("createGroup обновляет параметры группы и сохраняет код", () => {
     const state = createInitialState();
     const next = createGroup(state, { name: "Новая группа", description: "Описание", duration: 45 });
     expect(next.group.name).toBe("Новая группа");
     expect(next.group.duration).toBe(45);
+    expect(next.group.inviteCode).toBe(state.group.inviteCode);
+    expect(next.group.id).toBe(state.group.id);
+  });
+
+  it("createRoom создаёт отдельную комнату с новым ключом", () => {
+    const state = createInitialState();
+    const next = createRoom(state, {
+      name: "Рабочая группа",
+      description: "Новый поток",
+      duration: 30,
+      inviteCode: "P30TEST",
+      curatorName: "Ольга",
+    });
+
+    expect(next.group.id).not.toBe(state.group.id);
+    expect(next.group.inviteCode).toBe("P30TEST");
+    expect(next.group.currentDay).toBe(1);
+    expect(next.users).toHaveLength(1);
+    expect(next.users[0]?.name).toBe("Ольга");
+    expect(next.users[0]?.role).toBe("curator");
+    expect(next.session?.userId).toBe(next.users[0]?.id);
+    expect(next.tasks).toHaveLength(getProgramTaskTemplates().length);
+    expect(next.tasks.every((task) => task.groupId === next.group.id)).toBe(true);
+    expect(next.tasks.some((task) => state.tasks.some((demo) => demo.id === task.id))).toBe(false);
+    expect(next.calendarEvents).toHaveLength(0);
+    expect(next.taskCompletions).toHaveLength(0);
+  });
+
+  it("rotateInviteCode меняет только ключ текущей комнаты", () => {
+    const state = createInitialState();
+    const next = rotateInviteCode(state, "P30NEWX");
+    expect(next.group.id).toBe(state.group.id);
+    expect(next.group.inviteCode).toBe("P30NEWX");
   });
 
   it("createGroup не позволяет duration быть меньше текущего дня", () => {

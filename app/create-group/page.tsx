@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ListChecks, Sparkles } from "lucide-react";
 
+import { AccountFields } from "@/components/account-fields";
 import { InviteCodeCard } from "@/components/invite-code-card";
+import { InviteKeyField } from "@/components/invite-key-field";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,37 +14,102 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
-import { createGroup, defaultGroupDraft, switchRole } from "@/lib/services/groupService";
+import {
+  sanitizeName,
+  validateLogin,
+  validateName,
+  validatePassword,
+  validatePasswordConfirm,
+} from "@/lib/services/accountService";
+import { createRoom, defaultGroupDraft } from "@/lib/services/groupService";
+import { generateInviteCode } from "@/lib/services/inviteCode";
 import { getTasks } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
+import { attachAccount } from "@/lib/supabase/accounts";
+import { generateUniqueInviteCode } from "@/lib/supabase/persist";
 
 export default function CreateGroupPage() {
-  const { state, ready, update } = useAppStore();
+  const { state, ready, updateAsync } = useAppStore();
   const { toast } = useToast();
   const router = useRouter();
 
   const [name, setName] = useState(defaultGroupDraft.name);
   const [description, setDescription] = useState(defaultGroupDraft.description);
   const [duration, setDuration] = useState(String(defaultGroupDraft.duration));
+  const [curatorName, setCuratorName] = useState("");
+  const [inviteCode, setInviteCode] = useState(generateInviteCode);
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [refreshingCode, setRefreshingCode] = useState(false);
   const [created, setCreated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const refreshInviteCode = useCallback(async () => {
+    setRefreshingCode(true);
+    try {
+      setInviteCode(await generateUniqueInviteCode());
+    } catch {
+      setInviteCode(generateInviteCode());
+    } finally {
+      setRefreshingCode(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshInviteCode();
+  }, [refreshInviteCode]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    update((current) =>
-      createGroup(current, {
-        name,
-        description,
-        duration: Number(duration) || defaultGroupDraft.duration,
-      }),
-    );
+    const cleanedName = sanitizeName(curatorName);
+    const problem =
+      validateName(cleanedName) ??
+      validateLogin(login) ??
+      validatePassword(password) ??
+      validatePasswordConfirm(password, passwordConfirm);
 
-    setCreated(true);
-    toast("Группа создана");
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const next = await updateAsync((current) =>
+        createRoom(current, {
+          name,
+          description,
+          duration: Number(duration) || defaultGroupDraft.duration,
+          inviteCode,
+          curatorName: cleanedName,
+        }),
+      );
+
+      if (!next?.session?.userId) {
+        throw new Error("Не удалось создать комнату.");
+      }
+
+      await attachAccount({
+        userId: next.session.userId,
+        login,
+        password,
+      });
+
+      setCreated(true);
+      toast("Комната и аккаунт созданы");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Не удалось создать комнату.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openCuratorPanel = () => {
-    update((current) => switchRole(current, "curator"));
     router.push("/curator");
   };
 
@@ -55,7 +122,7 @@ export default function CreateGroupPage() {
           <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-success-soft text-success-strong">
             <CheckCircle2 className="size-6" />
           </span>
-          <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Группа создана</h1>
+          <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Комната создана</h1>
           <p className="mt-2.5 text-[15px] text-muted">
             Осталось передать код участникам — программа уже готова.
           </p>
@@ -117,14 +184,34 @@ export default function CreateGroupPage() {
   return (
     <AuthLayout>
       <div className="mb-7 text-center">
-        <h1 className="text-3xl font-semibold sm:text-4xl">Создать группу</h1>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Создать комнату</h1>
         <p className="mt-2.5 text-[15px] text-muted">
-          Небольшая группа и понятная программа на первый месяц.
+          Новая группа со своим ключом. Демо-комната останется на месте.
         </p>
       </div>
 
       <Card className="p-5 sm:p-7">
         <form onSubmit={handleSubmit} className="space-y-5">
+          <Field label="Ваше имя" htmlFor="curator-name">
+            <Input
+              id="curator-name"
+              value={curatorName}
+              onChange={(event) => setCuratorName(sanitizeName(event.target.value))}
+              placeholder="Как вас зовут?"
+              maxLength={40}
+              autoComplete="name"
+            />
+          </Field>
+
+          <AccountFields
+            login={login}
+            password={password}
+            passwordConfirm={passwordConfirm}
+            onLoginChange={setLogin}
+            onPasswordChange={setPassword}
+            onPasswordConfirmChange={setPasswordConfirm}
+          />
+
           <Field label="Название группы" htmlFor="group-name">
             <Input
               id="group-name"
@@ -161,8 +248,22 @@ export default function CreateGroupPage() {
             </div>
           </Field>
 
-          <Button type="submit" size="lg" fullWidth disabled={!ready || name.trim().length < 3}>
-            Создать группу
+          <InviteKeyField code={inviteCode} onRefresh={() => void refreshInviteCode()} refreshing={refreshingCode} />
+
+          {error && (
+            <p className="rounded-2xl bg-danger-soft px-4 py-3 text-[13px] text-danger" role="alert">
+              {error}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            disabled={!ready || name.trim().length < 3}
+          >
+            Создать комнату
           </Button>
         </form>
       </Card>

@@ -1,6 +1,7 @@
+import { getProgramTaskTemplates, DEFAULT_DURATION } from "../mockData";
 import { createId } from "../storage";
 import type { AppState, Group, User, UserRole } from "../types";
-import { DEFAULT_DURATION, DEMO_INVITE_CODE } from "../mockData";
+import { generateInviteCode, normalizeInviteCode } from "./inviteCode";
 
 export type CreateGroupInput = {
   name: string;
@@ -8,21 +9,96 @@ export type CreateGroupInput = {
   duration: number;
 };
 
-/** Обновляет параметры демо-группы. Код приглашения в MVP остаётся постоянным. */
+export type CreateRoomInput = CreateGroupInput & {
+  inviteCode?: string;
+  curatorName?: string;
+};
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Обновляет текущую комнату. Код приглашения не меняется. */
 export function createGroup(state: AppState, input: CreateGroupInput): AppState {
   const group: Group = {
     ...state.group,
     name: input.name.trim() || state.group.name,
     description: input.description.trim() || state.group.description,
     duration: Math.max(input.duration, state.group.currentDay),
-    inviteCode: DEMO_INVITE_CODE,
   };
 
   return { ...state, group };
 }
 
+/** Новая комната с уникальным ключом. Старая группа в базе не удаляется. */
+export function createRoom(state: AppState, input: CreateRoomInput): AppState {
+  const groupId = createId("g");
+  const curatorId = createId("u");
+  const inviteCode = normalizeInviteCode(input.inviteCode || generateInviteCode());
+  const current = getCurrentUser(state);
+  const curatorName = (input.curatorName ?? current?.name ?? "Куратор").trim() || "Куратор";
+
+  const group: Group = {
+    id: groupId,
+    name: input.name.trim() || defaultGroupDraft.name,
+    description: input.description.trim() || defaultGroupDraft.description,
+    inviteCode,
+    duration: Math.max(input.duration || DEFAULT_DURATION, 7),
+    currentDay: 1,
+    programStartDate: todayIsoDate(),
+    curatorId,
+    weeklyGoal: {
+      title: "Закрыть шаги первой недели: куратор, встреча, доступы.",
+      target: 6,
+      done: 0,
+    },
+  };
+
+  const curator: User = {
+    id: curatorId,
+    name: curatorName,
+    role: "curator",
+    avatar: current?.role === "curator" ? current.avatar ?? "🧑‍🏫" : "🧑‍🏫",
+    groupId,
+  };
+
+  const tasks = getProgramTaskTemplates().map((task) => ({
+    ...task,
+    id: createId("t"),
+    groupId,
+  }));
+
+  return {
+    ...state,
+    group,
+    users: [curator],
+    tasks,
+    taskCompletions: [],
+    messages: [],
+    directMessages: [],
+    signals: [],
+    announcements: [],
+    calendarEvents: [],
+    calendarEventResponses: [],
+    calendarEventViews: [],
+    session: { userId: curatorId, role: "curator" },
+  };
+}
+
+/** Новый ключ для текущей комнаты. Старый перестаёт пускать. */
+export function rotateInviteCode(state: AppState, nextCode = generateInviteCode()): AppState {
+  return {
+    ...state,
+    group: { ...state.group, inviteCode: normalizeInviteCode(nextCode) },
+  };
+}
+
 export function isValidInviteCode(state: AppState, code: string): boolean {
-  return code.trim().toUpperCase() === state.group.inviteCode.toUpperCase();
+  return normalizeInviteCode(code) === normalizeInviteCode(state.group.inviteCode);
 }
 
 /**
@@ -44,7 +120,7 @@ export function joinGroup(
   }
 
   if (!isValidInviteCode(state, input.code)) {
-    return { error: `Код группы не найден. Для демонстрации используйте ${state.group.inviteCode}.` };
+    return { error: "Код группы не найден." };
   }
 
   const existing = state.users.find(

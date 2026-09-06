@@ -194,6 +194,11 @@ const demoTasks: Task[] = [
   },
 ];
 
+/** Шаблон шагов для новой комнаты — без id и groupId. */
+export function getProgramTaskTemplates(): Omit<Task, "id" | "groupId">[] {
+  return demoTasks.map(({ week, kind, title, description }) => ({ week, kind, title, description }));
+}
+
 function buildTaskCompletions(): TaskCompletion[] {
   const now = new Date().toISOString();
   const mark = (userId: string, taskIds: string[]): TaskCompletion[] =>

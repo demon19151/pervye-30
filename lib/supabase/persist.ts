@@ -1,4 +1,5 @@
-import { createInitialState, STATE_VERSION } from "../mockData";
+import { createInitialState, GROUP_ID, STATE_VERSION } from "../mockData";
+import { generateInviteCode, normalizeInviteCode } from "../services/inviteCode";
 import type {
   Announcement,
   AppState,
@@ -121,76 +122,119 @@ async function syncById<T extends { id: string }>(
   }
 }
 
-export async function fetchState(): Promise<AppState> {
+export async function findGroupIdByInviteCode(code: string): Promise<string | null> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("groups")
+    .select("id")
+    .eq("invite_code", normalizeInviteCode(code))
+    .maybeSingle();
+  throwIfError(error, "find group");
+  return (data?.id as string | undefined) ?? null;
+}
+
+export async function generateUniqueInviteCode(): Promise<string> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = generateInviteCode();
+    try {
+      const existing = await findGroupIdByInviteCode(code);
+      if (!existing) return code;
+    } catch {
+      return code;
+    }
+  }
+
+  return generateInviteCode();
+}
+
+async function resolveGroupId(preferredGroupId?: string): Promise<string | null> {
   const db = getSupabase();
 
-  const [
-    groups,
-    users,
-    tasks,
-    completions,
-    messages,
-    directMessages,
-    signals,
-    announcements,
-    events,
-    responses,
-    views,
-  ] = await Promise.all([
-    db.from("groups").select("*").limit(1).maybeSingle(),
-    db.from("users").select("*"),
-    db.from("tasks").select("*"),
-    db.from("task_completions").select("*"),
-    db.from("messages").select("*"),
-    db.from("direct_messages").select("*"),
-    db.from("signals").select("*"),
-    db.from("announcements").select("*"),
-    db.from("calendar_events").select("*"),
-    db.from("calendar_event_responses").select("*"),
-    db.from("calendar_event_views").select("*"),
+  if (preferredGroupId) {
+    const { data, error } = await db.from("groups").select("id").eq("id", preferredGroupId).maybeSingle();
+    throwIfError(error, "load group");
+    if (data?.id) return data.id as string;
+  }
+
+  const session = loadSession();
+  if (session?.userId) {
+    const { data, error } = await db.from("users").select("group_id").eq("id", session.userId).maybeSingle();
+    throwIfError(error, "load session user");
+    if (data?.group_id) return data.group_id as string;
+  }
+
+  const { data: demo, error: demoError } = await db.from("groups").select("id").eq("id", GROUP_ID).maybeSingle();
+  throwIfError(demoError, "load demo group");
+  if (demo?.id) return demo.id as string;
+
+  const { data: first, error: firstError } = await db.from("groups").select("id").limit(1).maybeSingle();
+  throwIfError(firstError, "load first group");
+  return (first?.id as string | undefined) ?? null;
+}
+
+function emptyRelatedState(base: AppState): AppState {
+  return {
+    ...base,
+    users: [],
+    tasks: [],
+    taskCompletions: [],
+    messages: [],
+    directMessages: [],
+    signals: [],
+    announcements: [],
+    calendarEvents: [],
+    calendarEventResponses: [],
+    calendarEventViews: [],
+    session: null,
+  };
+}
+
+async function assembleState(groupId: string): Promise<AppState> {
+  const db = getSupabase();
+
+  const [group, users, tasks, messages, directMessages, announcements, events] = await Promise.all([
+    db.from("groups").select("*").eq("id", groupId).maybeSingle(),
+    db.from("users").select("*").eq("group_id", groupId),
+    db.from("tasks").select("*").eq("group_id", groupId),
+    db.from("messages").select("*").eq("group_id", groupId),
+    db.from("direct_messages").select("*").eq("group_id", groupId),
+    db.from("announcements").select("*").eq("group_id", groupId),
+    db.from("calendar_events").select("*").eq("group_id", groupId),
   ]);
 
-  for (const result of [
-    groups,
-    users,
-    tasks,
-    completions,
-    messages,
-    directMessages,
-    signals,
-    announcements,
-    events,
-    responses,
-    views,
-  ]) {
+  for (const result of [group, users, tasks, messages, directMessages, announcements, events]) {
     throwIfError(result.error, "load");
   }
 
-  if (!groups.data) {
-    const fresh = createInitialState();
-    await persistState(
-      {
-        ...fresh,
-        users: [],
-        tasks: [],
-        taskCompletions: [],
-        messages: [],
-        directMessages: [],
-        signals: [],
-        announcements: [],
-        calendarEvents: [],
-        calendarEventResponses: [],
-        calendarEventViews: [],
-        session: null,
-      },
-      fresh,
-    );
-    return { ...fresh, session: loadSession() };
+  if (!group.data) {
+    throw new Error("load: группа не найдена.");
+  }
+
+  const userIds = (users.data ?? []).map((row) => row.id as string);
+  const eventIds = (events.data ?? []).map((row) => row.id as string);
+
+  const [completions, signals, responses, views] = await Promise.all([
+    userIds.length
+      ? db.from("task_completions").select("*").in("user_id", userIds)
+      : Promise.resolve({ data: [], error: null }),
+    userIds.length
+      ? db.from("signals").select("*").in("user_id", userIds)
+      : Promise.resolve({ data: [], error: null }),
+    eventIds.length
+      ? db.from("calendar_event_responses").select("*").in("event_id", eventIds)
+      : Promise.resolve({ data: [], error: null }),
+    userIds.length
+      ? db.from("calendar_event_views").select("*").in("user_id", userIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  for (const result of [completions, signals, responses, views]) {
+    throwIfError(result.error, "load");
   }
 
   return {
     version: STATE_VERSION,
-    group: mapGroup(groups.data as GroupRow),
+    group: mapGroup(group.data as GroupRow),
     users: (users.data ?? []).map((row) => ({
       id: row.id as string,
       name: row.name as string,
@@ -270,13 +314,26 @@ export async function fetchState(): Promise<AppState> {
   };
 }
 
+export async function fetchState(preferredGroupId?: string): Promise<AppState> {
+  const groupId = await resolveGroupId(preferredGroupId);
+
+  if (!groupId) {
+    const fresh = createInitialState();
+    await persistState(emptyRelatedState(fresh), fresh);
+    return { ...fresh, session: loadSession() };
+  }
+
+  return assembleState(groupId);
+}
+
 export async function persistState(prev: AppState, next: AppState): Promise<void> {
   const db = getSupabase();
+  const previous = prev.group.id === next.group.id ? prev : emptyRelatedState(prev);
 
   const { error: groupError } = await db.from("groups").upsert(groupRow(next.group));
   throwIfError(groupError, "upsert groups");
 
-  await syncById<User>("users", prev.users, next.users, (user) => ({
+  await syncById<User>("users", previous.users, next.users, (user) => ({
     id: user.id,
     name: user.name,
     role: user.role,
@@ -284,7 +341,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     group_id: user.groupId,
   }));
 
-  await syncById<Task>("tasks", prev.tasks, next.tasks, (task) => ({
+  await syncById<Task>("tasks", previous.tasks, next.tasks, (task) => ({
     id: task.id,
     group_id: task.groupId,
     week: task.week,
@@ -293,7 +350,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     description: task.description,
   }));
 
-  await syncById<TaskCompletion>("task_completions", prev.taskCompletions, next.taskCompletions, (item) => ({
+  await syncById<TaskCompletion>("task_completions", previous.taskCompletions, next.taskCompletions, (item) => ({
     id: item.id,
     task_id: item.taskId,
     user_id: item.userId,
@@ -301,7 +358,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     answer: item.answer ?? null,
   }));
 
-  await syncById<Message>("messages", prev.messages, next.messages, (item) => ({
+  await syncById<Message>("messages", previous.messages, next.messages, (item) => ({
     id: item.id,
     group_id: item.groupId,
     user_id: item.userId,
@@ -310,7 +367,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     reactions: item.reactions,
   }));
 
-  await syncById<DirectMessage>("direct_messages", prev.directMessages, next.directMessages, (item) => ({
+  await syncById<DirectMessage>("direct_messages", previous.directMessages, next.directMessages, (item) => ({
     id: item.id,
     group_id: item.groupId,
     from_user_id: item.fromUserId,
@@ -319,7 +376,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     created_at: item.createdAt,
   }));
 
-  await syncById<SupportSignal>("signals", prev.signals, next.signals, (item) => ({
+  await syncById<SupportSignal>("signals", previous.signals, next.signals, (item) => ({
     id: item.id,
     user_id: item.userId,
     type: item.type,
@@ -328,7 +385,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     resolved: item.resolved,
   }));
 
-  await syncById<Announcement>("announcements", prev.announcements, next.announcements, (item) => ({
+  await syncById<Announcement>("announcements", previous.announcements, next.announcements, (item) => ({
     id: item.id,
     group_id: item.groupId,
     curator_id: item.curatorId,
@@ -336,7 +393,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     created_at: item.createdAt,
   }));
 
-  await syncById<CalendarEvent>("calendar_events", prev.calendarEvents, next.calendarEvents, (item) => ({
+  await syncById<CalendarEvent>("calendar_events", previous.calendarEvents, next.calendarEvents, (item) => ({
     id: item.id,
     group_id: item.groupId,
     day: item.day,
@@ -351,7 +408,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
 
   await syncById<CalendarEventResponse>(
     "calendar_event_responses",
-    prev.calendarEventResponses,
+    previous.calendarEventResponses,
     next.calendarEventResponses,
     (item) => ({
       id: item.id,
@@ -361,7 +418,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     }),
   );
 
-  const prevViews = prev.calendarEventViews;
+  const prevViews = previous.calendarEventViews;
   const nextViews = next.calendarEventViews;
   const removedViews = prevViews
     .filter((view) => !nextViews.some((item) => item.userId === view.userId))

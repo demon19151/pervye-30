@@ -14,6 +14,7 @@ import { navForRole } from "@/lib/navigation";
 import { switchRole } from "@/lib/services/groupService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { UserRole } from "@/lib/types";
+import { BotChatLauncher } from "@/components/bot-chat/bot-chat-launcher";
 
 /**
  * Общий каркас приватных страниц: sidebar на десктопе,
@@ -124,6 +125,7 @@ export function AppShell({
       </main>
 
       <BottomNavigation items={items} />
+      {currentUser.role === "participant" ? <BotChatLauncher /> : null}
     </div>
   );
 }

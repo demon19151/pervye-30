@@ -1,8 +1,8 @@
 /**
  * Доменная модель «Первые 30».
  *
- * Слой типов не зависит от способа хранения: сейчас данные лежат в localStorage,
- * позже те же структуры можно отдавать из Supabase/PostgreSQL без правок UI.
+ * Слой типов не зависит от способа хранения: снимок собирается из Supabase,
+ * сессия устройства остаётся в localStorage.
  */
 
 export type UserRole = "participant" | "curator";
@@ -140,7 +140,7 @@ export type Achievement = {
   unlocked: boolean;
 };
 
-/** Единый снимок состояния приложения — то, что кладётся в localStorage. */
+/** Единый снимок состояния приложения — собирается из таблиц Supabase. */
 export type AppState = {
   version: number;
   group: Group;

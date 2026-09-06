@@ -40,7 +40,7 @@ function sanitizeLettersOnly(value: string) {
 }
 
 export default function JoinPage() {
-  const { state, ready, update } = useAppStore();
+  const { state, ready, error: storeError, update } = useAppStore();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -179,9 +179,9 @@ export default function JoinPage() {
             </div>
           </div>
 
-          {error && (
+          {(error || storeError) && (
             <p className="rounded-2xl bg-danger-soft px-4 py-3 text-[13px] text-danger" role="alert">
-              {error}
+              {error ?? storeError}
             </p>
           )}
 

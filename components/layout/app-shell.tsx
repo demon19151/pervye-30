@@ -33,7 +33,7 @@ export function AppShell({
   role?: UserRole;
   children: ReactNode;
 }) {
-  const { state, ready, currentUser, update } = useAppStore();
+  const { state, ready, error, currentUser, update } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -41,6 +41,16 @@ export function AppShell({
   useEffect(() => {
     if (ready && !state?.session) router.replace("/join");
   }, [ready, state?.session, router]);
+
+  if (error && !state) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+        <Card className="p-5">
+          <p className="text-sm text-danger">{error}</p>
+        </Card>
+      </div>
+    );
+  }
 
   if (!ready || !state) {
     return (

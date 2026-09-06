@@ -1,0 +1,29 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pervye-30:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Добавляйте прочие переменные окружения приложения здесь либо через env_file.
+    env_file:
+      # Файл опционален: создайте .env на основе .env.example, если он нужен.
+      # Docker Compose проигнорирует директиву, если файл отсутствует, только
+      # если явно указать required: false.
+      - path: .env
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Контейнер не должен работать от root — образ уже переключается на
+    # пользователя nextjs в Dockerfile, но дублируем ограничение на всякий случай.
+    security_opt:
+      - no-new-privileges:true

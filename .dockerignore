@@ -1,0 +1,40 @@
+# --- Системные / VCS файлы ---
+.git
+.gitignore
+.github
+*.lnk
+
+# --- Зависимости (устанавливаются внутри образа через npm ci) ---
+node_modules
+npm-debug.log*
+
+# --- Артефакты сборки (генерируются заново внутри образа) ---
+.next
+out
+build
+dist
+
+# --- Переменные окружения и секреты: НЕ должны попадать в образ ---
+.env
+.env*.local
+.env.developmen
+.env.production
+
+# --- IDE / ОС ---
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# --- Документация и прочее, не нужное для сборки ---
+README.md
+*.md
+
+# --- Docker-файлы (не нужны внутри собственного контекста образа) ---
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# --- Тесты и покрытие ---
+coverage
+.nyc_output

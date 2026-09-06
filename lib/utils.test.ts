@@ -7,6 +7,7 @@ import {
   formatRelativeTime,
   formatScore,
   formatTime,
+  getProgramCalendarOffset,
   getProgramWeekdayLabels,
   isFeminineName,
   pluralize,
@@ -144,20 +145,28 @@ describe("pluralize", () => {
 });
 
 describe("getProgramWeekdayLabels", () => {
-  it("начинает колонки с пятницы для старта 28 августа 2026", () => {
+  it("всегда показывает пн–вс", () => {
     expect(getProgramWeekdayLabels("2026-08-28")).toEqual([
-      "Пт",
-      "Сб",
-      "Вс",
       "Пн",
       "Вт",
       "Ср",
       "Чт",
+      "Пт",
+      "Сб",
+      "Вс",
     ]);
+    expect(getProgramWeekdayLabels()).toEqual(["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]);
+  });
+});
+
+describe("getProgramCalendarOffset", () => {
+  it("сдвигает старт 28 августа 2026 на четыре клетки — пятница", () => {
+    expect(getProgramCalendarOffset("2026-08-28")).toBe(4);
   });
 
-  it("возвращает пн–вс, если даты нет", () => {
-    expect(getProgramWeekdayLabels()).toEqual(["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]);
+  it("не сдвигает понедельник и дату без значения", () => {
+    expect(getProgramCalendarOffset("2026-08-31")).toBe(0);
+    expect(getProgramCalendarOffset()).toBe(0);
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Clock, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -47,6 +47,9 @@ function EventsCalendar() {
   const { state, currentUser, update } = useAppStore();
   const toast = useToast();
 
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [listMaxHeight, setListMaxHeight] = useState<number | null>(null);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [infoDay, setInfoDay] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,6 +59,27 @@ function EventsCalendar() {
   const [location, setLocation] = useState("");
   const [link, setLink] = useState("");
   const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (!state || !currentUser) return;
+
+    const node = calendarRef.current;
+    if (!node) return;
+
+    const syncHeight = () => {
+      const desktop = window.matchMedia("(min-width: 1024px)").matches;
+      setListMaxHeight(desktop ? Math.round(node.getBoundingClientRect().height) : null);
+    };
+
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(node);
+    window.addEventListener("resize", syncHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncHeight);
+    };
+  }, [state, currentUser]);
 
   useEffect(() => {
     if (!modalOpen || !state) return;
@@ -154,7 +178,7 @@ function EventsCalendar() {
         title="Мероприятия"
         subtitle={
           duration === 30
-            ? "30 дней программы · четыре полные недели и пятая — 2 дня."
+            ? "30 дней программы · неделя в календаре с понедельника."
             : isCurator
               ? "Нажми на день, чтобы добавить ещё одно мероприятие."
               : "Нажми на день или напиши, что пойдёшь."
@@ -170,38 +194,43 @@ function EventsCalendar() {
       />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
-        <Card className="overflow-visible rounded-2xl p-4 sm:p-5">
-          <ProgramWeekCalendar
-            duration={duration}
-            startDate={state.group.programStartDate}
-            renderDay={(dayNumber) => (
-              <CalendarDayCell
-                dayNumber={dayNumber}
-                events={getCalendarEventsByDay(state, dayNumber)}
-                isToday={dayNumber === state.group.currentDay}
-                onOpen={() => openDay(dayNumber)}
-              />
-            )}
-          />
+        <div ref={calendarRef}>
+          <Card className="overflow-visible rounded-2xl p-4 sm:p-5">
+            <ProgramWeekCalendar
+              duration={duration}
+              startDate={state.group.programStartDate}
+              renderDay={(dayNumber) => (
+                <CalendarDayCell
+                  dayNumber={dayNumber}
+                  events={getCalendarEventsByDay(state, dayNumber)}
+                  isToday={dayNumber === state.group.currentDay}
+                  onOpen={() => openDay(dayNumber)}
+                />
+              )}
+            />
 
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[3px] bg-accent" aria-hidden />
-              день с мероприятием
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[3px] bg-accent-soft ring-2 ring-inset ring-accent" aria-hidden />
-              сегодня
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[3px] bg-[#f3f2f8] ring-1 ring-inset ring-line" aria-hidden />
-              обычный день
-            </span>
-          </div>
-        </Card>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-[3px] bg-accent" aria-hidden />
+                день с мероприятием
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-[3px] bg-accent-soft ring-2 ring-inset ring-accent" aria-hidden />
+                сегодня
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-[3px] bg-[#f3f2f8] ring-1 ring-inset ring-line" aria-hidden />
+                обычный день
+              </span>
+            </div>
+          </Card>
+        </div>
 
         {events.length > 0 ? (
-          <div className="space-y-3">
+          <div
+            className="space-y-3 lg:overflow-y-auto lg:overscroll-contain lg:pr-1"
+            style={listMaxHeight ? { maxHeight: listMaxHeight } : undefined}
+          >
             {events.map((event) => (
               <Card key={event.id} className="overflow-hidden p-4 sm:p-5">
                 <div className="flex items-start gap-3">

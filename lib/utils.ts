@@ -70,17 +70,22 @@ export function formatWeekRange(
   return `${from} — ${to}`;
 }
 
-const WEEKDAY_SHORT_RU = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"] as const;
+const WEEKDAY_LABELS_FROM_MONDAY = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"] as const;
 
-/** Подписи колонок календаря: день 1 программы задаёт первый столбец. */
-export function getProgramWeekdayLabels(startDate?: string): string[] {
-  if (!startDate) return ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+/** Подписи колонок календаря: всегда пн–вс. */
+export function getProgramWeekdayLabels(_startDate?: string): string[] {
+  return [...WEEKDAY_LABELS_FROM_MONDAY];
+}
+
+/** Сколько пустых ячеек до дня 1, если неделя начинается с понедельника. */
+export function getProgramCalendarOffset(startDate?: string): number {
+  if (!startDate) return 0;
 
   const [year, month, date] = startDate.split("-").map(Number);
-  if (!year || !month || !date) return ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  if (!year || !month || !date) return 0;
 
   const weekday = new Date(year, month - 1, date).getDay();
-  return Array.from({ length: 7 }, (_, index) => WEEKDAY_SHORT_RU[(weekday + index) % 7]);
+  return weekday === 0 ? 6 : weekday - 1;
 }
 
 export function formatTime(iso: string): string {

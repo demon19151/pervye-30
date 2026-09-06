@@ -30,6 +30,10 @@ export function getCalendarEventsByDay(state: AppState, day: number): CalendarEv
     .sort(compareEvents);
 }
 
+export function getUpcomingCalendarEvent(state: AppState, fromDay: number): CalendarEvent | undefined {
+  return getCalendarEvents(state).find((event) => event.day >= fromDay);
+}
+
 function normalizeTime(value: string): string {
   const v = value.trim();
   if (/^\d{2}:\d{2}$/.test(v)) return v;

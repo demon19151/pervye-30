@@ -6,12 +6,10 @@ import {
   Activity,
   HeartHandshake,
   ListChecks,
-  Megaphone,
   TrendingUp,
   Users,
 } from "lucide-react";
 
-import { AnnouncementModal } from "@/components/announcement-modal";
 import { CreateTaskModal } from "@/components/create-task-modal";
 import { InviteCodeCard } from "@/components/invite-code-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -21,7 +19,6 @@ import { StatCard } from "@/components/stat-card";
 import { SupportAlert } from "@/components/support-alert";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { addAnnouncement } from "@/lib/services/announcementService";
 import { getAllParticipantStats, getGroupStats } from "@/lib/services/statsService";
 import { addTask, getNextFreeDay, type CreateTaskInput } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
@@ -42,8 +39,6 @@ function CuratorOverview() {
 
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
-  const [announcementOpen, setAnnouncementOpen] = useState(false);
-  const [announcementError, setAnnouncementError] = useState<string | null>(null);
 
   if (!state || !currentUser) return null;
 
@@ -65,20 +60,6 @@ function CuratorOverview() {
     toast(`Задание на день ${result.task.day} добавлено`);
   };
 
-  const handleAddAnnouncement = (text: string) => {
-    const result = addAnnouncement(state, currentUser.id, text);
-
-    if ("error" in result) {
-      setAnnouncementError(result.error);
-      return;
-    }
-
-    update(() => result.state);
-    setAnnouncementError(null);
-    setAnnouncementOpen(false);
-    toast("Объявление отправлено группе");
-  };
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -89,10 +70,6 @@ function CuratorOverview() {
             <Button variant="outline" size="sm" onClick={() => setTaskOpen(true)}>
               <ListChecks className="size-4" />
               Новое задание
-            </Button>
-            <Button size="sm" onClick={() => setAnnouncementOpen(true)}>
-              <Megaphone className="size-4" />
-              Объявление
             </Button>
           </div>
         }
@@ -162,17 +139,6 @@ function CuratorOverview() {
         error={taskError}
         onSubmit={handleAddTask}
       />
-
-      <AnnouncementModal
-        open={announcementOpen}
-        onClose={() => {
-          setAnnouncementOpen(false);
-          setAnnouncementError(null);
-        }}
-        error={announcementError}
-        onSubmit={handleAddAnnouncement}
-      />
-
     </div>
   );
 }

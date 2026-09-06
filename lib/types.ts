@@ -103,6 +103,13 @@ export type CalendarEventView = {
   lastSeenAt: string;
 };
 
+export type CalendarEventResponse = {
+  id: string;
+  eventId: string;
+  userId: string;
+  createdAt: string;
+};
+
 export type CalendarEvent = {
   id: string;
   groupId: string;
@@ -141,6 +148,7 @@ export type AppState = {
   announcements: Announcement[];
   calendarEvents: CalendarEvent[];
   calendarEventViews: CalendarEventView[];
+  calendarEventResponses: CalendarEventResponse[];
   /** Кто сейчас в системе. null — не авторизован. */
   session: Session | null;
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Clock, MapPin, Pencil, Plus, Trash2, Users } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -13,14 +13,16 @@ import { useToast } from "@/components/ui/toast";
 import { cn, pluralize } from "@/lib/utils";
 import { useAppStore } from "@/lib/store/app-store";
 import {
+  cancelCalendarEventResponse,
   getCalendarEvents,
   getCalendarEventsByDay,
-  getUnseenCalendarEventCount,
-  markCalendarEventsSeen,
+  getEventResponses,
+  hasRespondedToEvent,
   removeCalendarEvent,
+  respondToCalendarEvent,
   upsertCalendarEvent,
 } from "@/lib/services/calendarEventsService";
-import type { CalendarEvent } from "@/lib/types";
+import type { AppState, CalendarEvent } from "@/lib/types";
 
 export default function EventsPage() {
   return (
@@ -44,12 +46,6 @@ export default function EventsPage() {
 function EventsCalendar() {
   const { state, currentUser, update } = useAppStore();
   const toast = useToast();
-
-  useEffect(() => {
-    if (!state || !currentUser || currentUser.role !== "participant") return;
-    if (getUnseenCalendarEventCount(state, currentUser.id) === 0) return;
-    update((current) => markCalendarEventsSeen(current, currentUser.id));
-  }, [state, currentUser, update]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [infoDay, setInfoDay] = useState<number | null>(null);
@@ -140,6 +136,18 @@ function EventsCalendar() {
     setEditingId(null);
   };
 
+  const onRespond = (eventId: string) => {
+    if (isCurator) return;
+    update((current) => respondToCalendarEvent(current, eventId, currentUser.id));
+    toast.toast("Отклик отправлен.", "success");
+  };
+
+  const onCancelResponse = (eventId: string) => {
+    if (isCurator) return;
+    update((current) => cancelCalendarEventResponse(current, eventId, currentUser.id));
+    toast.toast("Отклик отменён.", "info");
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -147,7 +155,7 @@ function EventsCalendar() {
         subtitle={
           isCurator
             ? "Нажми на день, чтобы добавить ещё одно мероприятие. В один день можно несколько событий."
-            : "Нажми на день, чтобы открыть информацию о мероприятиях."
+            : "Нажми на день или откликнись на мероприятие. Уведомление исчезнет после отклика."
         }
         action={
           isCurator ? (
@@ -212,7 +220,11 @@ function EventsCalendar() {
           {events.map((event) => (
             <Card key={event.id} className="overflow-hidden p-4 sm:p-5">
               <div className="flex items-start gap-3">
-                <EventDetails event={event} className="min-w-0 flex-1" />
+                <EventDetails
+                  event={event}
+                  responses={responseNames(state, event.id)}
+                  className="min-w-0 flex-1"
+                />
                 {isCurator ? (
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                     <Button variant="outline" size="sm" onClick={() => openEdit(event)}>
@@ -224,7 +236,13 @@ function EventsCalendar() {
                       Удалить
                     </Button>
                   </div>
-                ) : null}
+                ) : (
+                  <RespondButton
+                    responded={hasRespondedToEvent(state, event.id, currentUser.id)}
+                    onRespond={() => onRespond(event.id)}
+                    onCancel={() => onCancelResponse(event.id)}
+                  />
+                )}
               </div>
             </Card>
           ))}
@@ -256,7 +274,21 @@ function EventsCalendar() {
           <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
             {infoEvents.map((event) => (
               <div key={event.id} className="overflow-hidden rounded-2xl bg-surface-muted p-4">
-                <EventDetails event={event} hideDay />
+                <div className="flex items-start gap-3">
+                  <EventDetails
+                    event={event}
+                    hideDay
+                    responses={responseNames(state, event.id)}
+                    className="min-w-0 flex-1"
+                  />
+                  {isCurator ? null : (
+                    <RespondButton
+                      responded={hasRespondedToEvent(state, event.id, currentUser.id)}
+                      onRespond={() => onRespond(event.id)}
+                      onCancel={() => onCancelResponse(event.id)}
+                    />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -376,13 +408,46 @@ function EventsCalendar() {
   );
 }
 
+function responseNames(state: AppState, eventId: string): string[] {
+  return getEventResponses(state, eventId)
+    .map((item) => state.users.find((user) => user.id === item.userId)?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
+function RespondButton({
+  responded,
+  onRespond,
+  onCancel,
+}: {
+  responded: boolean;
+  onRespond: () => void;
+  onCancel: () => void;
+}) {
+  if (responded) {
+    return (
+      <Button variant="secondary" size="sm" className="shrink-0" onClick={onCancel}>
+        <Check className="size-3.5" />
+        Вы откликнулись
+      </Button>
+    );
+  }
+
+  return (
+    <Button size="sm" className="shrink-0" onClick={onRespond}>
+      Откликнуться
+    </Button>
+  );
+}
+
 function EventDetails({
   event,
   hideDay = false,
+  responses = [],
   className,
 }: {
   event: CalendarEvent;
   hideDay?: boolean;
+  responses?: string[];
   className?: string;
 }) {
   return (
@@ -417,6 +482,14 @@ function EventDetails({
       ) : null}
       {event.description ? (
         <p className="break-all text-[14px] leading-relaxed text-muted [overflow-wrap:anywhere]">{event.description}</p>
+      ) : null}
+      {responses.length > 0 ? (
+        <p className="flex items-start gap-1.5 text-[13px] text-muted">
+          <Users className="mt-0.5 size-3.5 shrink-0" />
+          <span className="min-w-0 break-all [overflow-wrap:anywhere]">
+            Откликнулись ({responses.length}): {responses.join(", ")}
+          </span>
+        </p>
       ) : null}
     </div>
   );

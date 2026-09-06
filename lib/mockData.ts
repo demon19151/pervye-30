@@ -315,6 +315,7 @@ export function createInitialState(now: Date = new Date()): AppState {
     signals: buildSignals(now),
     announcements: buildAnnouncements(now),
     calendarEventViews: [],
+    calendarEventResponses: [],
     calendarEvents: [
       {
         id: "ce-1",

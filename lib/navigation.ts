@@ -3,7 +3,6 @@ import {
   CalendarDays,
   LayoutDashboard,
   ListChecks,
-  Megaphone,
   Settings,
   Trophy,
   TrendingUp,
@@ -36,7 +35,6 @@ export const curatorNav: NavItem[] = [
   { label: "Участники", href: "/curator/participants", icon: Users, mobile: true },
   { label: "Мероприятия", href: "/events", icon: CalendarDays, mobile: true },
   { label: "Задания", href: "/curator/tasks", icon: ListChecks },
-  { label: "Объявления", href: "/curator/announcements", icon: Megaphone },
   { label: "Настройки", href: "/curator/settings", icon: Settings },
 ];
 

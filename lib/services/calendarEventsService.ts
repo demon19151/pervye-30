@@ -1,5 +1,5 @@
 import { createId } from "../storage";
-import type { AppState, CalendarEvent } from "../types";
+import type { AppState, CalendarEvent, CalendarEventResponse } from "../types";
 
 export type CalendarEventInput = {
   id?: string;
@@ -108,28 +108,50 @@ export function upsertCalendarEvent(
   };
 }
 
-export function getUnseenCalendarEventCount(state: AppState, userId: string): number {
-  const events = eventsOfGroup(state);
-  const view = (state.calendarEventViews ?? []).find((item) => item.userId === userId);
-
-  if (!view) return events.length;
-
-  return events.filter((event) => {
-    const changedAt = event.updatedAt || event.createdAt;
-    return changedAt > view.lastSeenAt;
-  }).length;
+export function getEventResponses(state: AppState, eventId: string): CalendarEventResponse[] {
+  return (state.calendarEventResponses ?? []).filter((item) => item.eventId === eventId);
 }
 
-export function markCalendarEventsSeen(state: AppState, userId: string): AppState {
-  const lastSeenAt = new Date().toISOString();
-  const views = state.calendarEventViews ?? [];
-  const existing = views.find((item) => item.userId === userId);
+export function hasRespondedToEvent(state: AppState, eventId: string, userId: string): boolean {
+  return (state.calendarEventResponses ?? []).some(
+    (item) => item.eventId === eventId && item.userId === userId,
+  );
+}
+
+export function getUnseenCalendarEventCount(state: AppState, userId: string): number {
+  return eventsOfGroup(state).filter((event) => !hasRespondedToEvent(state, event.id, userId)).length;
+}
+
+export function respondToCalendarEvent(
+  state: AppState,
+  eventId: string,
+  userId: string,
+): AppState {
+  if (hasRespondedToEvent(state, eventId, userId)) return state;
+
+  const response: CalendarEventResponse = {
+    id: createId("cer"),
+    eventId,
+    userId,
+    createdAt: new Date().toISOString(),
+  };
 
   return {
     ...state,
-    calendarEventViews: existing
-      ? views.map((item) => (item.userId === userId ? { ...item, lastSeenAt } : item))
-      : [...views, { userId, lastSeenAt }],
+    calendarEventResponses: [...(state.calendarEventResponses ?? []), response],
+  };
+}
+
+export function cancelCalendarEventResponse(
+  state: AppState,
+  eventId: string,
+  userId: string,
+): AppState {
+  return {
+    ...state,
+    calendarEventResponses: (state.calendarEventResponses ?? []).filter(
+      (item) => !(item.eventId === eventId && item.userId === userId),
+    ),
   };
 }
 
@@ -137,5 +159,8 @@ export function removeCalendarEvent(state: AppState, eventId: string): AppState 
   return {
     ...state,
     calendarEvents: (state.calendarEvents ?? []).filter((event) => event.id !== eventId),
+    calendarEventResponses: (state.calendarEventResponses ?? []).filter(
+      (item) => item.eventId !== eventId,
+    ),
   };
 }

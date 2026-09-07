@@ -2,13 +2,11 @@ import { getProgramTaskTemplates, DEFAULT_DURATION, GROUP_ID } from "../mockData
 import { createId } from "../storage";
 import type { AppState, Group, User, UserRole } from "../types";
 import { generateInviteCode, normalizeInviteCode } from "./inviteCode";
-import { getProgramWeek, getWeekBounds, getWeekCount } from "./taskService";
 import { isIsoDate, programDayFromStartDate, todayIsoDate } from "../utils";
 
 export type CreateGroupInput = {
   name: string;
   description: string;
-  duration: number;
   programStartDate?: string;
 };
 
@@ -29,26 +27,25 @@ export function isEnrollmentOpen(group: Group): boolean {
   return group.enrollmentOpen !== false && !isGroupArchived(group);
 }
 
-/** Обновляет текущую комнату. Код приглашения не меняется. */
+/** Обновляет текущую комнату. Код приглашения не меняется. Программа всегда 30 дней. */
 export function createGroup(state: AppState, input: CreateGroupInput): AppState {
-  const requested = Math.max(input.duration || DEFAULT_DURATION, 7);
   const nextStart =
     input.programStartDate && isIsoDate(input.programStartDate)
       ? input.programStartDate
       : state.group.programStartDate;
-  // currentDay — это управляемый кураторами "положение" программы (через выбор недели),
-  // а не автоматический счётчик по календарной разнице между startDate и "сегодня".
   const startChanged = nextStart !== state.group.programStartDate;
-  const currentDay =
+  const currentDay = Math.min(
     startChanged && nextStart
-      ? programDayFromStartDate(nextStart, requested)
-      : state.group.currentDay;
+      ? programDayFromStartDate(nextStart, DEFAULT_DURATION)
+      : state.group.currentDay,
+    DEFAULT_DURATION,
+  );
 
   const group: Group = {
     ...state.group,
     name: input.name.trim() || state.group.name,
     description: input.description.trim() || state.group.description,
-    duration: Math.max(requested, currentDay),
+    duration: DEFAULT_DURATION,
     programStartDate: nextStart,
     currentDay,
   };
@@ -63,7 +60,7 @@ export function createRoom(state: AppState, input: CreateRoomInput): AppState {
   const inviteCode = normalizeInviteCode(input.inviteCode || generateInviteCode());
   const current = getCurrentUser(state);
   const curatorName = (input.curatorName ?? current?.name ?? "Наставник").trim() || "Наставник";
-  const duration = Math.max(input.duration || DEFAULT_DURATION, 7);
+  const duration = DEFAULT_DURATION;
   const programStartDate =
     input.programStartDate && isIsoDate(input.programStartDate)
       ? input.programStartDate
@@ -216,22 +213,6 @@ export function updateWeeklyGoal(state: AppState, done: number): AppState {
   };
 }
 
-/** Ставит программу на выбранную неделю: текущий день = первый день этой недели. */
-export function setProgramWeek(state: AppState, week: number): AppState {
-  const weeks = getWeekCount(state.group.duration);
-  const nextWeek = Math.min(Math.max(Math.trunc(week), 1), weeks);
-  const currentWeek = getProgramWeek(state.group.currentDay, state.group.duration);
-  if (nextWeek === currentWeek) return state;
-
-  const { start } = getWeekBounds(nextWeek, state.group.duration);
-  const currentDay = Math.min(Math.max(start, 1), state.group.duration);
-
-  return {
-    ...state,
-    group: { ...state.group, currentDay },
-  };
-}
-
 export function setEnrollmentOpen(state: AppState, open: boolean): AppState {
   if (isGroupArchived(state.group) && open) return state;
   return {
@@ -314,7 +295,6 @@ export function removeParticipant(state: AppState, userId: string): AppState {
 export const defaultGroupDraft: CreateGroupInput = {
   name: "Первые 30 дней в университете",
   description: "Небольшая группа для комфортной адаптации в первые недели.",
-  duration: DEFAULT_DURATION,
 };
 
 // --- Селекторы -------------------------------------------------------------

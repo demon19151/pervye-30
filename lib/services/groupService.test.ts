@@ -16,7 +16,6 @@ import {
   rotateInviteCode,
   setCurrentUser,
   setEnrollmentOpen,
-  setProgramWeek,
   signOut,
   switchRole,
   updateWeeklyGoal,
@@ -125,9 +124,9 @@ describe("groupService", () => {
 
   it("createGroup обновляет параметры группы и сохраняет код", () => {
     const state = createInitialState();
-    const next = createGroup(state, { name: "Новая группа", description: "Описание", duration: 45 });
+    const next = createGroup(state, { name: "Новая группа", description: "Описание" });
     expect(next.group.name).toBe("Новая группа");
-    expect(next.group.duration).toBe(45);
+    expect(next.group.duration).toBe(30);
     expect(next.group.inviteCode).toBe(state.group.inviteCode);
     expect(next.group.id).toBe(state.group.id);
   });
@@ -137,7 +136,6 @@ describe("groupService", () => {
     const next = createRoom(state, {
       name: "Рабочая группа",
       description: "Новый поток",
-      duration: 30,
       inviteCode: "P30TEST",
       curatorName: "Ольга",
     });
@@ -163,7 +161,6 @@ describe("groupService", () => {
     const next = createRoom(state, {
       name: "Рабочая группа",
       description: "Новый поток",
-      duration: 30,
       programStartDate: "2026-09-01",
       inviteCode: "P30DATE",
       curatorName: "Ольга",
@@ -179,7 +176,6 @@ describe("groupService", () => {
     const next = createGroup(state, {
       name: state.group.name,
       description: state.group.description,
-      duration: state.group.duration,
       programStartDate: "2026-09-01",
     });
     expect(next.group.programStartDate).toBe("2026-09-01");
@@ -216,30 +212,24 @@ describe("groupService", () => {
     expect(next.group.inviteCode).toBe("P30NEWX");
   });
 
-  it("createGroup не позволяет duration быть меньше текущего дня", () => {
-    const state = createInitialState();
-    const next = createGroup(state, { name: "X", description: "", duration: 1 });
-    expect(next.group.duration).toBe(state.group.currentDay);
-  });
-
   it("updateWeeklyGoal обновляет прогресс недельной цели", () => {
     const state = createInitialState();
     const next = updateWeeklyGoal(state, 4);
     expect(next.group.weeklyGoal?.done).toBe(4);
   });
 
-  it("setProgramWeek переключает текущий день на начало выбранной недели", () => {
+  it("createGroup и createRoom всегда ставят 30 дней", () => {
     const state = createInitialState();
-    expect(state.group.currentDay).toBe(7);
+    const updated = createGroup(state, { name: "X", description: "" });
+    expect(updated.group.duration).toBe(30);
 
-    const week2 = setProgramWeek(state, 2);
-    expect(week2.group.currentDay).toBe(8);
-
-    const week4 = setProgramWeek(week2, 4);
-    expect(week4.group.currentDay).toBe(22);
-
-    const sameWeek = setProgramWeek(week4, 4);
-    expect(sameWeek).toBe(week4);
+    const room = createRoom(state, {
+      name: "Поток",
+      description: "",
+      inviteCode: "P30MAXX",
+      curatorName: "Ольга",
+    });
+    expect(room.group.duration).toBe(30);
   });
 
   it("getParticipantDay совпадает с текущим днём группы", () => {

@@ -21,7 +21,7 @@ export type Group = {
   name: string;
   description: string;
   inviteCode: string;
-  /** Длительность программы в днях. */
+  /** Длительность программы в днях. Всегда 30. */
   duration: number;
   /** Текущий день программы (1..duration). */
   currentDay: number;

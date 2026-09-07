@@ -35,7 +35,6 @@ export default function CreateGroupPage() {
 
   const [name, setName] = useState(defaultGroupDraft.name);
   const [description, setDescription] = useState(defaultGroupDraft.description);
-  const [duration, setDuration] = useState(String(defaultGroupDraft.duration));
   const [startDate, setStartDate] = useState(todayIsoDate());
   const [curatorName, setCuratorName] = useState("");
   const [inviteCode, setInviteCode] = useState(generateInviteCode);
@@ -85,7 +84,6 @@ export default function CreateGroupPage() {
         createRoom(current, {
           name,
           description,
-          duration: Number(duration) || defaultGroupDraft.duration,
           programStartDate: startDate,
           inviteCode,
           curatorName: cleanedName,
@@ -139,7 +137,7 @@ export default function CreateGroupPage() {
             <h2 className="mt-4 text-xl font-semibold">{state.group.name}</h2>
             <p className="mt-2 text-[15px] leading-relaxed text-muted">{state.group.description}</p>
             <p className="mt-4 text-[13px] text-subtle">
-              Длительность программы — {state.group.duration} дней
+              Программа — 30 дней
               {state.group.programStartDate ? `. Старт: ${state.group.programStartDate}` : ""}
             </p>
           </Card>
@@ -237,7 +235,7 @@ export default function CreateGroupPage() {
           <Field
             label="Дата старта"
             htmlFor="group-start"
-            hint="День 1 программы. От неё считаются недели и календарь."
+            hint="День 1 программы. От неё считаются недели. Программа всегда 30 дней."
           >
             <Input
               id="group-start"
@@ -246,21 +244,6 @@ export default function CreateGroupPage() {
               onChange={(event) => setStartDate(event.target.value)}
               className="max-w-52"
             />
-          </Field>
-
-          <Field label="Длительность" htmlFor="group-duration" hint="Количество дней программы">
-            <div className="flex items-center gap-3">
-              <Input
-                id="group-duration"
-                type="number"
-                min={7}
-                max={90}
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                className="max-w-28"
-              />
-              <span className="text-sm text-muted">дней</span>
-            </div>
           </Field>
 
           <InviteKeyField code={inviteCode} onRefresh={() => void refreshInviteCode()} refreshing={refreshingCode} />

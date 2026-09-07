@@ -34,7 +34,7 @@ const steps = [
   {
     icon: MessageCircleQuestion,
     title: "Спроси, если застрял",
-    text: "ИИ-помощник отвечает по базе знаний университета. Наставнику можно написать лично — группа это не увидит.",
+    text: "ИИ-помощник отвечает по базе знаний университета. Наставнику можно написать лично.",
   },
 ];
 
@@ -352,7 +352,7 @@ function HeroPreview() {
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold">Наставник</p>
-              <p className="text-[12px] text-muted">Лично, группа не увидит</p>
+              <p className="text-[12px] text-muted">Личная переписка</p>
             </div>
           </div>
         </div>

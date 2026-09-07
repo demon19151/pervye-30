@@ -94,7 +94,7 @@ function AskQuestion() {
             )}
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{curator?.name ?? "Наставник"}</p>
-              <p className="truncate text-[12px] text-muted">Личные сообщения, группа не увидит</p>
+              <p className="truncate text-[12px] text-muted">Личная переписка с наставником</p>
             </div>
           </div>
 
@@ -102,7 +102,7 @@ function AskQuestion() {
             <CuratorChatPanel
               counterpart={curator}
               emptyTitle="Напишите наставнику"
-              emptyDescription="Спросите про задания, встречу группы или то, что неудобно писать всем."
+              emptyDescription="Спросите про задания, встречу или то, что хочется обсудить лично."
             />
           ) : (
             <div className="flex flex-1 items-center p-4">

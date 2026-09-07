@@ -67,8 +67,8 @@ insert into public.messages (id, group_id, user_id, text, created_at, reactions)
   ('m-5', 'g-work', 'u-dmitry', 'Получил первую обратную связь от преподавателя 👍', now() - interval '35 minutes', '{"🔥": 2, "👏": 1}'::jsonb);
 
 insert into public.direct_messages (id, group_id, from_user_id, to_user_id, text, created_at) values
-  ('dm-1', 'g-work', 'u-elena', 'u-anna', 'Анна, если что-то будет непонятно — пиши сюда. Это только между нами, группа не увидит.', now() - interval '250 minutes'),
-  ('dm-2', 'g-work', 'u-anna', 'u-elena', 'Спасибо! Как раз хотела уточнить про оформление учебных документов, но в общем чате стеснялась.', now() - interval '210 minutes');
+  ('dm-1', 'g-work', 'u-elena', 'u-anna', 'Анна, если что-то будет непонятно — пиши сюда. Это личная переписка со мной.', now() - interval '250 minutes'),
+  ('dm-2', 'g-work', 'u-anna', 'u-elena', 'Спасибо! Как раз хотела уточнить про оформление учебных документов.', now() - interval '210 minutes');
 
 insert into public.announcements (id, group_id, curator_id, text, created_at) values
   ('a-1', 'g-work', 'u-elena', 'В пятницу в 16:00 короткая встреча группы — обсудим итоги первой недели.', now() - interval '240 minutes');
@@ -77,7 +77,7 @@ insert into public.calendar_events (id, group_id, day, time, title, location, li
   (
     'ce-meeting', 'g-work', 5, '10:00', 'Собрание первокурсников',
     'ГУК, холл 1 этажа', null,
-    'Первая встреча курса: куда ходить на пары, кто наставник и где появится чат группы.',
+    'Первая встреча курса: куда ходить на пары и кто наставник.',
     now() - interval '4 days', now() - interval '2 days'
   ),
   (

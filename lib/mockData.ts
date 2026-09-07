@@ -317,7 +317,7 @@ function buildDirectMessages(now: Date): DirectMessage[] {
       groupId: GROUP_ID,
       fromUserId: CURATOR_ID,
       toUserId: DEMO_PARTICIPANT_ID,
-      text: "Анна, если что-то будет непонятно — пиши сюда. Это только между нами, группа не увидит.",
+      text: "Анна, если что-то будет непонятно — пиши сюда. Это личная переписка со мной.",
       createdAt: minutesAgo(250),
     },
     {
@@ -325,7 +325,7 @@ function buildDirectMessages(now: Date): DirectMessage[] {
       groupId: GROUP_ID,
       fromUserId: DEMO_PARTICIPANT_ID,
       toUserId: CURATOR_ID,
-      text: "Спасибо! Как раз хотела уточнить про оформление учебных документов, но в общем чате стеснялась.",
+      text: "Спасибо! Как раз хотела уточнить про оформление учебных документов.",
       createdAt: minutesAgo(210),
     },
   ];
@@ -368,7 +368,7 @@ export function createInitialState(now: Date = new Date()): AppState {
         time: "10:00",
         title: "Собрание первокурсников",
         location: "ГУК, холл 1 этажа",
-        description: "Первая встреча курса: куда ходить на пары, кто наставник и где появится чат группы.",
+        description: "Первая встреча курса: куда ходить на пары и кто наставник.",
         createdAt: new Date(now.getTime() - 4 * 24 * 60_000).toISOString(),
         updatedAt: new Date(now.getTime() - 2 * 24 * 60_000).toISOString(),
       },

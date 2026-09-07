@@ -11,7 +11,7 @@ import { toDative } from "@/lib/utils";
 const suggestions = [
   "как ты? Если хочется — можем коротко поговорить сегодня.",
   "заметил, что первая неделя даётся непросто. Давай разберём вместе, что мешает?",
-  "если есть вопрос, который неудобно задавать в группе — напиши мне напрямую.",
+  "если есть вопрос — напиши мне напрямую, отвечу в личной переписке.",
 ];
 
 export function MessageParticipantModal({
@@ -36,7 +36,7 @@ export function MessageParticipantModal({
       open={open}
       onClose={onClose}
       title={`Написать ${toDative(participantName)}`}
-      description="Сообщение придёт только этому участнику — в личной переписке, не в общей ленте."
+      description="Сообщение придёт только этому участнику в личной переписке."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>

@@ -125,3 +125,7 @@ supabase/migrations/ схема и демо-данные
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase · Lucide.
 
 Интерфейс: desktop, tablet и mobile. На телефоне — нижняя навигация.
+
+## Техдокументация
+
+Схема кода (сервисы, Supabase persist, логика прогресса, AI-эндпоинт): `TECHNICAL.md`.

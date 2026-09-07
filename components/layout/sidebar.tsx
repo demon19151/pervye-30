@@ -16,6 +16,7 @@ export function Sidebar({
   badges,
   onNavigate,
   className,
+  showDemoControls,
 }: {
   items: NavItem[];
   user: User;
@@ -23,6 +24,7 @@ export function Sidebar({
   badges?: Record<string, number>;
   onNavigate?: () => void;
   className?: string;
+  showDemoControls?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -64,7 +66,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <RoleSwitcher user={user} onNavigate={onNavigate} />
+      {showDemoControls ? <RoleSwitcher user={user} onNavigate={onNavigate} /> : null}
     </div>
   );
 }

@@ -305,33 +305,35 @@ function CuratorSettings() {
             }
           />
 
-          <Card className="p-5 sm:p-6">
-            <CardHeader
-              icon={<CalendarDays className="size-5" />}
-              title="Неделя программы"
-              description={`Сейчас неделя ${currentWeek}: дни ${weekBounds.start}–${weekBounds.end}${
-                weekRange ? `. ${weekRange}` : ""
-              }`}
-            />
+          {demo ? (
+            <Card className="p-5 sm:p-6">
+              <CardHeader
+                icon={<CalendarDays className="size-5" />}
+                title="Неделя программы"
+                description={`Сейчас неделя ${currentWeek}: дни ${weekBounds.start}–${weekBounds.end}${
+                  weekRange ? `. ${weekRange}` : ""
+                }`}
+              />
 
-            <div className="mt-5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2">
-              {Array.from({ length: weekCount }, (_, index) => index + 1).map((week) => (
-                <button
-                  key={week}
-                  type="button"
-                  onClick={() => handleWeekChange(week)}
-                  className={cn(
-                    "rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-                    week === currentWeek
-                      ? "bg-accent text-white"
-                      : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
-                  )}
-                >
-                  Неделя {week}
-                </button>
-              ))}
-            </div>
-          </Card>
+              <div className="mt-5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2">
+                {Array.from({ length: weekCount }, (_, index) => index + 1).map((week) => (
+                  <button
+                    key={week}
+                    type="button"
+                    onClick={() => handleWeekChange(week)}
+                    className={cn(
+                      "rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+                      week === currentWeek
+                        ? "bg-accent text-white"
+                        : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
+                    )}
+                  >
+                    Неделя {week}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          ) : null}
 
           {demo ? (
             <Card className="p-5 sm:p-6">

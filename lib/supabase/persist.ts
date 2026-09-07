@@ -524,26 +524,10 @@ export async function deleteRemoteGroup(groupId: string): Promise<void> {
 
 export async function resetRemoteState(): Promise<AppState> {
   const db = getSupabase();
-  const tables = [
-    "calendar_event_responses",
-    "calendar_event_views",
-    "calendar_events",
-    "task_completions",
-    "tasks",
-    "messages",
-    "direct_messages",
-    "signals",
-    "announcements",
-    "summary_reflections",
-    "users",
-    "groups",
-  ];
-
-  for (const table of tables) {
-    const column = table === "calendar_event_views" ? "user_id" : "id";
-    const { error } = await db.from(table).delete().neq(column, "");
-    throwIfError(error, `reset ${table}`);
-  }
+  // При "сбросе демо" не должно стираться всё приложение:
+  // удаляем только демо-комнату, а связанные данные уйдут по FK on delete cascade.
+  const { error: groupError } = await db.from("groups").delete().eq("id", GROUP_ID);
+  throwIfError(groupError, "reset demo group");
 
   const fresh = createInitialState();
   await persistState(

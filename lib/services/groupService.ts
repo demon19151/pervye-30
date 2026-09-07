@@ -36,6 +36,8 @@ export function createGroup(state: AppState, input: CreateGroupInput): AppState 
     input.programStartDate && isIsoDate(input.programStartDate)
       ? input.programStartDate
       : state.group.programStartDate;
+  // currentDay — это управляемый кураторами "положение" программы (через выбор недели),
+  // а не автоматический счётчик по календарной разнице между startDate и "сегодня".
   const startChanged = nextStart !== state.group.programStartDate;
   const currentDay =
     startChanged && nextStart

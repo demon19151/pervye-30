@@ -1,7 +1,7 @@
 import { retrieve } from "@/lib/bot/rag/retrieve";
 import { buildContextBlock, buildSearchQuery, NO_CONTEXT_PROMPT, SYSTEM_PROMPT } from "@/lib/bot/rag/prompt";
 import { checkRateLimit } from "@/lib/bot/rate-limit";
-import { getLlmConfig, LlmConfigError, LlmRequestError, streamChat, type ChatMessage } from "@/lib/bot/llm";
+import { getLlmConfig, LlmConfigError, streamChat, type ChatMessage } from "@/lib/bot/llm";
 
 // Индекс базы знаний/FS — нужен Node-рантайм.
 export const runtime = "nodejs";
@@ -105,10 +105,7 @@ export async function POST(request: Request) {
         console.error("[bot-chat] error:", error);
         send({
           type: "error",
-          message:
-            error instanceof LlmRequestError
-              ? error.message
-              : "Модель не ответила. Попробуй переформулировать вопрос или повторить позже.",
+          message: "Модель не ответила. Попробуй переформулировать вопрос или повторить позже.",
         });
       } finally {
         controller.close();

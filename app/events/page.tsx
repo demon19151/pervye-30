@@ -268,7 +268,7 @@ function EventsCalendar() {
             <p className="px-5 py-6 text-[15px] leading-relaxed text-muted sm:px-6">
               {isCurator
                 ? "Пока нет мероприятий. Нажми на день в календаре, чтобы добавить первое."
-                : "Куратор ещё не добавил мероприятия в календарь."}
+                : "Наставник ещё не добавил мероприятия в календарь."}
             </p>
           )}
         </Card>
@@ -312,7 +312,7 @@ function EventsCalendar() {
           </div>
         ) : (
           <p className="text-sm leading-relaxed text-muted">
-            На этот день куратор пока не добавил мероприятия.
+            На этот день наставник пока не добавил мероприятия.
           </p>
         )}
       </Modal>

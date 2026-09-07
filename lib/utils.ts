@@ -48,6 +48,32 @@ export function formatDelta(value: number): string {
   return `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}`;
 }
 
+export function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export function todayIsoDate(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Какой день программы сегодня, если день 1 = `startDate`. */
+export function programDayFromStartDate(
+  startDate: string,
+  duration: number,
+  now = new Date(),
+): number {
+  const [year, month, date] = startDate.split("-").map(Number);
+  if (!year || !month || !date) return 1;
+
+  const start = new Date(year, month - 1, date);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.floor((today.getTime() - start.getTime()) / 86_400_000) + 1;
+  return Math.min(Math.max(diff, 1), Math.max(duration, 1));
+}
+
 /** Дата дня программы: день 1 от `programStartDate` (YYYY-MM-DD). */
 export function formatProgramDate(startDate: string | undefined, day: number): string | undefined {
   if (!startDate || !Number.isInteger(day) || day < 1) return undefined;

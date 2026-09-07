@@ -1,12 +1,15 @@
-import { getProgramTaskTemplates, DEFAULT_DURATION } from "../mockData";
+import { getProgramTaskTemplates, DEFAULT_DURATION, GROUP_ID } from "../mockData";
 import { createId } from "../storage";
 import type { AppState, Group, User, UserRole } from "../types";
 import { generateInviteCode, normalizeInviteCode } from "./inviteCode";
+import { getProgramWeek, getWeekBounds, getWeekCount } from "./taskService";
+import { isIsoDate, programDayFromStartDate, todayIsoDate } from "../utils";
 
 export type CreateGroupInput = {
   name: string;
   description: string;
   duration: number;
+  programStartDate?: string;
 };
 
 export type CreateRoomInput = CreateGroupInput & {
@@ -14,21 +17,40 @@ export type CreateRoomInput = CreateGroupInput & {
   curatorName?: string;
 };
 
-function todayIsoDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+export function isDemoGroup(group: { id: string }): boolean {
+  return group.id === GROUP_ID;
+}
+
+export function isGroupArchived(group: Group): boolean {
+  return Boolean(group.archivedAt);
+}
+
+export function isEnrollmentOpen(group: Group): boolean {
+  return group.enrollmentOpen !== false && !isGroupArchived(group);
 }
 
 /** Обновляет текущую комнату. Код приглашения не меняется. */
 export function createGroup(state: AppState, input: CreateGroupInput): AppState {
+  const requested = Math.max(input.duration || DEFAULT_DURATION, 7);
+  const nextStart =
+    input.programStartDate && isIsoDate(input.programStartDate)
+      ? input.programStartDate
+      : state.group.programStartDate;
+  // currentDay — это управляемый кураторами "положение" программы (через выбор недели),
+  // а не автоматический счётчик по календарной разнице между startDate и "сегодня".
+  const startChanged = nextStart !== state.group.programStartDate;
+  const currentDay =
+    startChanged && nextStart
+      ? programDayFromStartDate(nextStart, requested)
+      : state.group.currentDay;
+
   const group: Group = {
     ...state.group,
     name: input.name.trim() || state.group.name,
     description: input.description.trim() || state.group.description,
-    duration: Math.max(input.duration, state.group.currentDay),
+    duration: Math.max(requested, currentDay),
+    programStartDate: nextStart,
+    currentDay,
   };
 
   return { ...state, group };
@@ -40,19 +62,25 @@ export function createRoom(state: AppState, input: CreateRoomInput): AppState {
   const curatorId = createId("u");
   const inviteCode = normalizeInviteCode(input.inviteCode || generateInviteCode());
   const current = getCurrentUser(state);
-  const curatorName = (input.curatorName ?? current?.name ?? "Куратор").trim() || "Куратор";
+  const curatorName = (input.curatorName ?? current?.name ?? "Наставник").trim() || "Наставник";
+  const duration = Math.max(input.duration || DEFAULT_DURATION, 7);
+  const programStartDate =
+    input.programStartDate && isIsoDate(input.programStartDate)
+      ? input.programStartDate
+      : todayIsoDate();
 
   const group: Group = {
     id: groupId,
     name: input.name.trim() || defaultGroupDraft.name,
     description: input.description.trim() || defaultGroupDraft.description,
     inviteCode,
-    duration: Math.max(input.duration || DEFAULT_DURATION, 7),
-    currentDay: 1,
-    programStartDate: todayIsoDate(),
+    duration,
+    currentDay: programDayFromStartDate(programStartDate, duration),
+    programStartDate,
+    enrollmentOpen: true,
     curatorId,
     weeklyGoal: {
-      title: "Закрыть шаги первой недели: куратор, встреча, доступы.",
+      title: "Закрыть шаги первой недели: наставник, встреча, доступы.",
       target: 6,
       done: 0,
     },
@@ -85,6 +113,7 @@ export function createRoom(state: AppState, input: CreateRoomInput): AppState {
     calendarEvents: [],
     calendarEventResponses: [],
     calendarEventViews: [],
+    summaryReflections: [],
     session: { userId: curatorId, role: "curator" },
   };
 }
@@ -121,6 +150,10 @@ export function joinGroup(
 
   if (!isValidInviteCode(state, input.code)) {
     return { error: "Код группы не найден." };
+  }
+
+  if (!isEnrollmentOpen(state.group)) {
+    return { error: "Набор в эту группу закрыт." };
   }
 
   const existing = state.users.find(
@@ -180,6 +213,101 @@ export function updateWeeklyGoal(state: AppState, done: number): AppState {
       ...state.group,
       weeklyGoal: { ...state.group.weeklyGoal, done },
     },
+  };
+}
+
+/** Ставит программу на выбранную неделю: текущий день = первый день этой недели. */
+export function setProgramWeek(state: AppState, week: number): AppState {
+  const weeks = getWeekCount(state.group.duration);
+  const nextWeek = Math.min(Math.max(Math.trunc(week), 1), weeks);
+  const currentWeek = getProgramWeek(state.group.currentDay, state.group.duration);
+  if (nextWeek === currentWeek) return state;
+
+  const { start } = getWeekBounds(nextWeek, state.group.duration);
+  const currentDay = Math.min(Math.max(start, 1), state.group.duration);
+
+  return {
+    ...state,
+    group: { ...state.group, currentDay },
+  };
+}
+
+export function setEnrollmentOpen(state: AppState, open: boolean): AppState {
+  if (isGroupArchived(state.group) && open) return state;
+  return {
+    ...state,
+    group: { ...state.group, enrollmentOpen: open },
+  };
+}
+
+export function archiveGroup(state: AppState): AppState {
+  if (state.group.archivedAt) return state;
+  return {
+    ...state,
+    group: {
+      ...state.group,
+      archivedAt: new Date().toISOString(),
+      enrollmentOpen: false,
+    },
+  };
+}
+
+export function unarchiveGroup(state: AppState): AppState {
+  if (!state.group.archivedAt) return state;
+  return {
+    ...state,
+    group: {
+      ...state.group,
+      archivedAt: undefined,
+      enrollmentOpen: true,
+    },
+  };
+}
+
+export function updateCurrentUserProfile(
+  state: AppState,
+  input: { name?: string; avatar?: string },
+): AppState {
+  const userId = state.session?.userId;
+  if (!userId) return state;
+
+  const name = input.name?.trim();
+  const avatar = input.avatar?.trim();
+
+  return {
+    ...state,
+    users: state.users.map((user) =>
+      user.id === userId
+        ? {
+            ...user,
+            ...(name && name.length >= 2 ? { name } : {}),
+            ...(avatar ? { avatar } : {}),
+          }
+        : user,
+    ),
+  };
+}
+
+/** Убирает участника и его следы. Наставника так удалить нельзя. */
+export function removeParticipant(state: AppState, userId: string): AppState {
+  const user = state.users.find((item) => item.id === userId);
+  if (!user || user.role !== "participant") return state;
+
+  return {
+    ...state,
+    users: state.users.filter((item) => item.id !== userId),
+    taskCompletions: (state.taskCompletions ?? []).filter((item) => item.userId !== userId),
+    messages: (state.messages ?? []).filter((item) => item.userId !== userId),
+    directMessages: (state.directMessages ?? []).filter(
+      (item) => item.fromUserId !== userId && item.toUserId !== userId,
+    ),
+    signals: (state.signals ?? []).filter((item) => item.userId !== userId),
+    calendarEventResponses: (state.calendarEventResponses ?? []).filter(
+      (item) => item.userId !== userId,
+    ),
+    calendarEventViews: (state.calendarEventViews ?? []).filter((item) => item.userId !== userId),
+    summaryReflections: (state.summaryReflections ?? []).filter((item) => item.userId !== userId),
+    session: state.session?.userId === userId ? null : state.session,
   };
 }
 

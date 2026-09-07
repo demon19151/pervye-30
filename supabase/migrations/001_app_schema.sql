@@ -45,7 +45,7 @@ create table public.tasks (
   id text primary key,
   group_id text not null references public.groups (id) on delete cascade,
   week integer not null,
-  kind text not null check (kind in ('required', 'recommended', 'question', 'status')),
+  kind text not null check (kind in ('required', 'recommended', 'question')),
   title text not null,
   description text not null default ''
 );

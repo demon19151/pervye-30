@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Bot, MessageCircleQuestion, UserRound } from "lucide-react";
 
 import { BotChat } from "@/components/bot-chat/bot-chat";
@@ -26,7 +26,11 @@ export default function AskPage() {
 
 function AskQuestion() {
   const { state } = useAppStore();
-  const [pane, setPane] = useState<Pane>("curator");
+  const [pane, setPane] = useState<Pane>("bot");
+
+  useEffect(() => {
+    if (window.location.hash === "#mentor") setPane("curator");
+  }, []);
 
   if (!state) return null;
 
@@ -36,62 +40,25 @@ function AskQuestion() {
     <div className="space-y-5">
       <PageHeader
         title="Задать вопрос"
-        subtitle="Два окна рядом: напишите куратору лично или спросите ИИ-помощника про учёбу."
+        subtitle="Два окна рядом: спросите ИИ-помощника про учёбу или напишите наставнику лично."
       />
 
       <div className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-muted p-1 ring-1 ring-inset ring-line lg:hidden">
-        <PaneButton
-          active={pane === "curator"}
-          icon={<UserRound className="size-4" />}
-          label="Куратор"
-          onClick={() => setPane("curator")}
-        />
         <PaneButton
           active={pane === "bot"}
           icon={<Bot className="size-4" />}
           label="ИИ помощник"
           onClick={() => setPane("bot")}
         />
+        <PaneButton
+          active={pane === "curator"}
+          icon={<UserRound className="size-4" />}
+          label="Наставник"
+          onClick={() => setPane("curator")}
+        />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card
-          className={cn(
-            "flex h-[32rem] flex-col overflow-hidden lg:h-[36rem]",
-            pane !== "curator" && "hidden lg:flex",
-          )}
-        >
-          <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-            {curator ? (
-              <Avatar name={curator.name} emoji={curator.avatar} size="sm" />
-            ) : (
-              <span className="flex size-8 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
-                <UserRound className="size-4" />
-              </span>
-            )}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{curator?.name ?? "Куратор"}</p>
-              <p className="truncate text-[12px] text-muted">Личные сообщения, группа не увидит</p>
-            </div>
-          </div>
-
-          {curator ? (
-            <CuratorChatPanel
-              counterpart={curator}
-              emptyTitle="Напишите куратору"
-              emptyDescription="Спросите про задания, встречу группы или то, что неудобно писать всем."
-            />
-          ) : (
-            <div className="flex flex-1 items-center p-4">
-              <EmptyState
-                icon={<MessageCircleQuestion className="size-5" />}
-                title="Куратор ещё не назначен"
-                description="Как только куратор появится в группе, здесь можно будет написать ему напрямую."
-              />
-            </div>
-          )}
-        </Card>
-
         <Card
           className={cn(
             "flex h-[32rem] flex-col overflow-hidden lg:h-[36rem]",
@@ -109,6 +76,43 @@ function AskQuestion() {
           </div>
 
           <BotChat className="min-h-0 flex-1" />
+        </Card>
+
+        <Card
+          className={cn(
+            "flex h-[32rem] flex-col overflow-hidden lg:h-[36rem]",
+            pane !== "curator" && "hidden lg:flex",
+          )}
+        >
+          <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+            {curator ? (
+              <Avatar name={curator.name} emoji={curator.avatar} size="sm" />
+            ) : (
+              <span className="flex size-8 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
+                <UserRound className="size-4" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{curator?.name ?? "Наставник"}</p>
+              <p className="truncate text-[12px] text-muted">Личные сообщения, группа не увидит</p>
+            </div>
+          </div>
+
+          {curator ? (
+            <CuratorChatPanel
+              counterpart={curator}
+              emptyTitle="Напишите наставнику"
+              emptyDescription="Спросите про задания, встречу группы или то, что неудобно писать всем."
+            />
+          ) : (
+            <div className="flex flex-1 items-center p-4">
+              <EmptyState
+                icon={<MessageCircleQuestion className="size-5" />}
+                title="Наставник ещё не назначен"
+                description="Как только наставник появится в группе, здесь можно будет написать ему напрямую."
+              />
+            </div>
+          )}
         </Card>
       </div>
     </div>

@@ -84,7 +84,7 @@ export default function JoinPage() {
       <div className="mb-7 text-center">
         <h1 className="text-3xl font-semibold sm:text-4xl">Войти по коду</h1>
         <p className="mt-2.5 text-[15px] text-muted">
-          Имя, логин, пароль и код комнаты от куратора.
+          Имя, логин, пароль и код комнаты от наставника.
         </p>
       </div>
 

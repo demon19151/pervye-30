@@ -2,16 +2,21 @@ import { describe, expect, it } from "@jest/globals";
 import { createInitialState, DEMO_INVITE_CODE, CURATOR_ID } from "../mockData";
 import { getProgramTaskTemplates } from "../mockData";
 import {
+  archiveGroup,
   createGroup,
   createRoom,
   getCurator,
   getCurrentUser,
   getParticipantDay,
   getParticipants,
+  isEnrollmentOpen,
   isValidInviteCode,
   joinGroup,
+  removeParticipant,
   rotateInviteCode,
   setCurrentUser,
+  setEnrollmentOpen,
+  setProgramWeek,
   signOut,
   switchRole,
   updateWeeklyGoal,
@@ -140,6 +145,8 @@ describe("groupService", () => {
     expect(next.group.id).not.toBe(state.group.id);
     expect(next.group.inviteCode).toBe("P30TEST");
     expect(next.group.currentDay).toBe(1);
+    expect(next.group.programStartDate).toBeDefined();
+    expect(next.group.enrollmentOpen).toBe(true);
     expect(next.users).toHaveLength(1);
     expect(next.users[0]?.name).toBe("Ольга");
     expect(next.users[0]?.role).toBe("curator");
@@ -149,6 +156,57 @@ describe("groupService", () => {
     expect(next.tasks.some((task) => state.tasks.some((demo) => demo.id === task.id))).toBe(false);
     expect(next.calendarEvents).toHaveLength(0);
     expect(next.taskCompletions).toHaveLength(0);
+  });
+
+  it("createRoom ставит дату старта и считает текущий день от неё", () => {
+    const state = createInitialState();
+    const next = createRoom(state, {
+      name: "Рабочая группа",
+      description: "Новый поток",
+      duration: 30,
+      programStartDate: "2026-09-01",
+      inviteCode: "P30DATE",
+      curatorName: "Ольга",
+    });
+
+    expect(next.group.programStartDate).toBe("2026-09-01");
+    expect(next.group.currentDay).toBeGreaterThanOrEqual(1);
+    expect(next.group.currentDay).toBeLessThanOrEqual(30);
+  });
+
+  it("createGroup обновляет дату старта", () => {
+    const state = createInitialState();
+    const next = createGroup(state, {
+      name: state.group.name,
+      description: state.group.description,
+      duration: state.group.duration,
+      programStartDate: "2026-09-01",
+    });
+    expect(next.group.programStartDate).toBe("2026-09-01");
+  });
+
+  it("закрытый набор не пускает по ключу", () => {
+    const state = createInitialState();
+    const closed = setEnrollmentOpen(state, false);
+    expect(isEnrollmentOpen(closed.group)).toBe(false);
+
+    const result = joinGroup(closed, { name: "Никита", code: DEMO_INVITE_CODE, role: "participant" });
+    expect("error" in result).toBe(true);
+    if ("error" in result) expect(result.error).toMatch(/закрыт/i);
+  });
+
+  it("archiveGroup закрывает набор", () => {
+    const state = createInitialState();
+    const archived = archiveGroup(state);
+    expect(archived.group.archivedAt).toBeTruthy();
+    expect(isEnrollmentOpen(archived.group)).toBe(false);
+  });
+
+  it("removeParticipant убирает студента и его отметки", () => {
+    const state = createInitialState();
+    const next = removeParticipant(state, "u-anna");
+    expect(next.users.some((user) => user.id === "u-anna")).toBe(false);
+    expect(next.taskCompletions.some((item) => item.userId === "u-anna")).toBe(false);
   });
 
   it("rotateInviteCode меняет только ключ текущей комнаты", () => {
@@ -168,6 +226,20 @@ describe("groupService", () => {
     const state = createInitialState();
     const next = updateWeeklyGoal(state, 4);
     expect(next.group.weeklyGoal?.done).toBe(4);
+  });
+
+  it("setProgramWeek переключает текущий день на начало выбранной недели", () => {
+    const state = createInitialState();
+    expect(state.group.currentDay).toBe(7);
+
+    const week2 = setProgramWeek(state, 2);
+    expect(week2.group.currentDay).toBe(8);
+
+    const week4 = setProgramWeek(week2, 4);
+    expect(week4.group.currentDay).toBe(22);
+
+    const sameWeek = setProgramWeek(week4, 4);
+    expect(sameWeek).toBe(week4);
   });
 
   it("getParticipantDay совпадает с текущим днём группы", () => {

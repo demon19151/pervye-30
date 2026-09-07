@@ -45,7 +45,7 @@ export function RoleSwitcher({ user, onNavigate }: { user: User; onNavigate?: ()
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">{user.name}</span>
           <span className="block text-[11px] text-subtle">
-            {user.role === "curator" ? "Куратор" : "Участник"}
+            {user.role === "curator" ? "Наставник" : "Участник"}
           </span>
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-subtle" />
@@ -71,7 +71,7 @@ export function RoleSwitcher({ user, onNavigate }: { user: User; onNavigate?: ()
                       : "bg-surface text-muted ring-1 ring-inset ring-line hover:text-foreground",
                   )}
                 >
-                  {role === "participant" ? "Участник" : "Куратор"}
+                  {role === "participant" ? "Участник" : "Наставник"}
                 </button>
               ))}
             </div>

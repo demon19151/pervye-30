@@ -112,3 +112,24 @@ export async function loadAccountState(profile: AccountProfile): Promise<AppStat
     session: { userId: profile.userId, role: profile.role },
   };
 }
+
+export async function getAccountLogin(userId: string): Promise<string | null> {
+  const db = getSupabase();
+  const { data, error } = await db.rpc("get_account_login", { p_user_id: userId });
+  throwAccountError(error);
+  return typeof data === "string" && data.length > 0 ? data : null;
+}
+
+export async function changeAccountPassword(input: {
+  userId: string;
+  currentPassword: string;
+  nextPassword: string;
+}): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db.rpc("change_account_password", {
+    p_user_id: input.userId,
+    p_current_password: input.currentPassword,
+    p_new_password: input.nextPassword,
+  });
+  throwAccountError(error);
+}

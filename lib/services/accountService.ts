@@ -53,6 +53,10 @@ export function accountErrorMessage(cause: unknown): string {
   if (raw.includes("PASSWORD_INVALID")) return "Пароль: минимум 6 символов.";
   if (raw.includes("NAME_INVALID")) return "Имя может содержать только буквы.";
   if (raw.includes("GROUP_NOT_FOUND")) return "Код группы не найден.";
+  if (raw.includes("ENROLLMENT_CLOSED")) return "Набор в эту группу закрыт.";
+  if (raw.includes("PASSWORD_WRONG")) return "Текущий пароль неверный.";
+  if (raw.includes("ACCOUNT_NOT_FOUND")) return "Для этой учётки логин ещё не задан.";
+  if (raw.includes("DEMO_ROOM_LOCKED")) return "Демо-комнату нельзя удалить. Сбросьте демо-данные.";
   if (raw.includes("ACCOUNT_EXISTS")) return "У этого пользователя уже есть аккаунт.";
   if (raw.includes("USER_NOT_FOUND")) return "Пользователь не найден.";
   if (raw.includes("ROLE_INVALID")) return "Некорректная роль.";

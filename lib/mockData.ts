@@ -7,6 +7,7 @@ import type {
   Message,
   SupportSignal,
   Task,
+  TaskAnswerOption,
   TaskCompletion,
   User,
 } from "./types";
@@ -21,6 +22,12 @@ export const DEMO_PARTICIPANT_ID = "u-anna";
 
 export const GROUP_ID = "g-work";
 
+const CHECK_IN_ANSWERS: TaskAnswerOption[] = [
+  { id: "clear", label: "Всё понятно" },
+  { id: "question", label: "Есть вопрос", needsAttention: true },
+  { id: "help", label: "Нужна помощь", needsAttention: true },
+];
+
 const demoGroup: Group = {
   id: GROUP_ID,
   name: "Первые 30 дней в университете",
@@ -32,7 +39,7 @@ const demoGroup: Group = {
   programStartDate: "2026-08-28",
   curatorId: CURATOR_ID,
   weeklyGoal: {
-    title: "Закрыть шаги первой недели: куратор, встреча, доступы.",
+    title: "Закрыть шаги первой недели: наставник, встреча, доступы.",
     target: 6,
     done: 4,
   },
@@ -53,8 +60,8 @@ const demoTasks: Task[] = [
     groupId: GROUP_ID,
     week: 1,
     kind: "required",
-    title: "Познакомиться с куратором",
-    description: "Сделано, когда ты понимаешь, к кому обращаться, и знаешь, как написать куратору.",
+    title: "Познакомиться с наставником",
+    description: "Сделано, когда ты понимаешь, к кому обращаться, и знаешь, как написать наставнику.",
   },
   {
     id: "t-w1-8",
@@ -70,7 +77,7 @@ const demoTasks: Task[] = [
     week: 1,
     kind: "required",
     title: "Посетить вводную встречу",
-    description: "Сделано, когда ты был на собрании или заранее написал куратору, если не смог прийти.",
+    description: "Сделано, когда ты был на собрании или заранее написал наставнику, если не смог прийти.",
   },
   {
     id: "t-w1-4",
@@ -94,7 +101,7 @@ const demoTasks: Task[] = [
     week: 1,
     kind: "question",
     title: "Понимаешь ли ты, где искать расписание?",
-    description: "Если пока нет — куратор увидит ответ и поможет. Это не провал, а сигнал.",
+    description: "Если пока нет — наставник увидит ответ и поможет. Это не провал, а сигнал.",
   },
   {
     id: "t-w1-2",
@@ -134,15 +141,16 @@ const demoTasks: Task[] = [
     week: 2,
     kind: "required",
     title: "Найти контакты деканата, старосты и технической поддержки",
-    description: "Сделано, когда знаешь, куда обращаться с разными вопросами — не только к куратору.",
+    description: "Сделано, когда знаешь, куда обращаться с разными вопросами — не только к наставнику.",
   },
   {
     id: "t-w2-4",
     groupId: GROUP_ID,
     week: 2,
-    kind: "status",
+    kind: "question",
     title: "Как тебе даётся первая учебная неделя?",
-    description: "Выбери статус — куратор увидит, если есть вопрос или нужна помощь.",
+    description: "Выбери ответ — наставник увидит, если есть вопрос или нужна помощь.",
+    answerOptions: CHECK_IN_ANSWERS.map((item) => ({ ...item })),
   },
   {
     id: "t-w3-3",
@@ -156,9 +164,10 @@ const demoTasks: Task[] = [
     id: "t-w3-2",
     groupId: GROUP_ID,
     week: 3,
-    kind: "status",
+    kind: "question",
     title: "Как проходит адаптация?",
-    description: "Короткий статус для куратора: всё понятно, есть вопрос или нужна помощь.",
+    description: "Короткий вопрос для наставника: всё понятно, есть вопрос или нужна помощь.",
+    answerOptions: CHECK_IN_ANSWERS.map((item) => ({ ...item })),
   },
   {
     id: "t-w3-1",
@@ -180,9 +189,10 @@ const demoTasks: Task[] = [
     id: "t-w4-2",
     groupId: GROUP_ID,
     week: 4,
-    kind: "status",
+    kind: "question",
     title: "Что осталось непонятным после первого месяца?",
-    description: "Выбери статус. Если есть вопрос или нужна помощь — куратор увидит это отдельно.",
+    description: "Выбери ответ. Если есть вопрос или нужна помощь — наставник увидит это отдельно.",
+    answerOptions: CHECK_IN_ANSWERS.map((item) => ({ ...item })),
   },
   {
     id: "t-w4-3",
@@ -196,17 +206,24 @@ const demoTasks: Task[] = [
 
 /** Шаблон шагов для новой комнаты — без id и groupId. */
 export function getProgramTaskTemplates(): Omit<Task, "id" | "groupId">[] {
-  return demoTasks.map(({ week, kind, title, description }) => ({ week, kind, title, description }));
+  return demoTasks.map(({ week, kind, title, description, answerOptions }) => ({
+    week,
+    kind,
+    title,
+    description,
+    ...(answerOptions ? { answerOptions: answerOptions.map((item) => ({ ...item })) } : {}),
+  }));
 }
 
 function buildTaskCompletions(): TaskCompletion[] {
-  const now = new Date().toISOString();
+  const now = Date.now();
+  const at = (hoursAgo: number) => new Date(now - hoursAgo * 3_600_000).toISOString();
   const mark = (userId: string, taskIds: string[]): TaskCompletion[] =>
     taskIds.map((taskId, index) => ({
       id: `tc-${userId}-${index + 1}`,
       taskId,
       userId,
-      createdAt: now,
+      createdAt: at(48),
     }));
 
   return [
@@ -215,10 +232,24 @@ function buildTaskCompletions(): TaskCompletion[] {
     ...mark("u-irina", ["t-w1-1"]),
     ...mark("u-dmitry", ["t-w1-1", "t-w1-2", "t-w1-3", "t-w1-4", "t-w1-5", "t-w1-6", "t-w1-8"]),
     {
+      id: "tc-anna-q",
+      taskId: "t-w1-7",
+      userId: DEMO_PARTICIPANT_ID,
+      createdAt: at(30),
+      answer: "yes",
+    },
+    {
+      id: "tc-maxim-q",
+      taskId: "t-w1-7",
+      userId: "u-maxim",
+      createdAt: at(6),
+      answer: "no",
+    },
+    {
       id: "tc-dmitry-q",
       taskId: "t-w1-7",
       userId: "u-dmitry",
-      createdAt: now,
+      createdAt: at(2),
       answer: "yes",
     },
   ];
@@ -312,17 +343,6 @@ function buildAnnouncements(now: Date): Announcement[] {
   ];
 }
 
-/** Значения для предпросмотра итоговой страницы, пока программа не завершена. */
-export const SUMMARY_PREVIEW = {
-  completedTasks: 23,
-  closedWeeks: 4,
-};
-
-/** Согласуется по роду, чтобы текст не звучал чужим для участницы. */
-export function curatorSummaryNote(feminine: boolean): string {
-  return `Ты хорошо ${feminine ? "вошла" : "вошёл"} в ритм команды. Особенно заметно, как изменилось твоё понимание процессов за последний месяц.`;
-}
-
 export const STATE_VERSION = 11;
 
 /** Собирает полный демонстрационный снимок состояния. */
@@ -339,6 +359,7 @@ export function createInitialState(now: Date = new Date()): AppState {
     announcements: buildAnnouncements(now),
     calendarEventViews: [],
     calendarEventResponses: [],
+    summaryReflections: [],
     calendarEvents: [
       {
         id: "ce-meeting",
@@ -347,7 +368,7 @@ export function createInitialState(now: Date = new Date()): AppState {
         time: "10:00",
         title: "Собрание первокурсников",
         location: "ГУК, холл 1 этажа",
-        description: "Первая встреча курса: куда ходить на пары, кто куратор и где появится чат группы.",
+        description: "Первая встреча курса: куда ходить на пары, кто наставник и где появится чат группы.",
         createdAt: new Date(now.getTime() - 4 * 24 * 60_000).toISOString(),
         updatedAt: new Date(now.getTime() - 2 * 24 * 60_000).toISOString(),
       },

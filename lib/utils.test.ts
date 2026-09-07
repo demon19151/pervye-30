@@ -11,6 +11,7 @@ import {
   getProgramWeekdayLabels,
   isFeminineName,
   pluralize,
+  programDayFromStartDate,
   toDative,
 } from "./utils";
 
@@ -187,5 +188,16 @@ describe("average", () => {
     expect(average([1, 2, 3])).toBe(2);
     expect(average([1, 2])).toBe(1.5);
     expect(average([4, 4, 5])).toBe(4.3);
+  });
+});
+
+describe("programDayFromStartDate", () => {
+  it("день старта — это день 1", () => {
+    expect(programDayFromStartDate("2026-09-01", 30, new Date(2026, 8, 1))).toBe(1);
+  });
+
+  it("считает прошедшие дни и не выходит за длительность", () => {
+    expect(programDayFromStartDate("2026-09-01", 30, new Date(2026, 8, 7))).toBe(7);
+    expect(programDayFromStartDate("2026-09-01", 30, new Date(2026, 10, 1))).toBe(30);
   });
 });

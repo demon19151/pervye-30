@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { CalendarDays, Check, Clock, ListChecks, Target, TrendingUp, Users } from "lucide-react";
 
-import { InviteCodeCard } from "@/components/invite-code-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ProgressBar } from "@/components/progress-bar";
@@ -21,7 +20,7 @@ import {
   hasRespondedToEvent,
   respondToCalendarEvent,
 } from "@/lib/services/calendarEventsService";
-import { getAllParticipantStats, getGroupStats } from "@/lib/services/statsService";
+import { getAllParticipantStats, getGroupStats, getWeekGoalProgress } from "@/lib/services/statsService";
 import {
   getProgramWeek,
   getTasksByWeek,
@@ -59,7 +58,7 @@ function GroupOverview() {
   const { group } = state;
   const participants = getAllParticipantStats(state);
   const stats = getGroupStats(state);
-  const goal = group.weeklyGoal;
+  const weekGoal = getWeekGoalProgress(state);
   const isCurator = currentUser.role === "curator";
   const week = getProgramWeek(group.currentDay, group.duration);
   const upcoming = getUpcomingCalendarEvent(state, group.currentDay);
@@ -115,21 +114,21 @@ function GroupOverview() {
             </div>
           </Card>
 
-          {goal ? (
+          {weekGoal.target > 0 ? (
             <Card className="p-5 sm:p-6">
               <CardHeader
                 icon={<Target className="size-5" />}
                 title="Цель недели"
+                description={`Обязательные шаги недели ${weekGoal.week} — по всем участникам.`}
                 action={
-                  <Badge tone={goal.done >= goal.target ? "success" : "accent"}>
-                    {goal.done} / {goal.target}
+                  <Badge tone={weekGoal.done >= weekGoal.target ? "success" : "accent"}>
+                    {weekGoal.done} / {weekGoal.target}
                   </Badge>
                 }
               />
-              <p className="mt-4 text-[15px] leading-relaxed text-muted">{goal.title}</p>
               <ProgressBar
-                value={(goal.done / goal.target) * 100}
-                tone={goal.done >= goal.target ? "success" : "accent"}
+                value={(weekGoal.done / weekGoal.target) * 100}
+                tone={weekGoal.done >= weekGoal.target ? "success" : "accent"}
                 className="mt-4"
               />
             </Card>
@@ -195,11 +194,6 @@ function GroupOverview() {
               })}
             </ul>
           </Card>
-
-          <InviteCodeCard
-            code={group.inviteCode}
-            description="По этому коду в группу может войти новый участник."
-          />
         </div>
       </div>
     </div>

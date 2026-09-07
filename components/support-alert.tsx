@@ -13,21 +13,23 @@ import { toDative } from "@/lib/utils";
 /**
  * Блок «Требуют внимания».
  * Формулировка всегда одна: «Участнику может понадобиться поддержка».
- * Это социальный сигнал для куратора, а не оценка состояния человека.
+ * Это социальный сигнал для наставника, а не оценка состояния человека.
  */
 export function SupportAlert({
   flagged,
   onWrite,
+  onResolve,
 }: {
   flagged: ParticipantStats[];
   onWrite?: (stats: ParticipantStats) => void;
+  onResolve?: (stats: ParticipantStats) => void;
 }) {
   return (
     <Card tone={flagged.length > 0 ? "warning" : "default"} className="p-5 sm:p-6">
       <CardHeader
         icon={<HeartHandshake className="size-5" />}
         title="Требуют внимания"
-        description="Ненавязчивый сигнал: кому-то из группы стоит написать первым."
+        description="Сигнал, что кому-то нужна помощь"
         action={
           flagged.length > 0 ? (
             <Badge tone="warning">{flagged.length}</Badge>
@@ -66,12 +68,20 @@ export function SupportAlert({
                     ))}
                   </ul>
 
-                  {onWrite && (
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                      <Button size="sm" onClick={() => onWrite(stats)}>
-                        <MessageCircle className="size-4" />
-                        Написать {toDative(stats.user.name)}
-                      </Button>
+                  {(onWrite || onResolve) && (
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      {onWrite && (
+                        <Button size="sm" onClick={() => onWrite(stats)}>
+                          <MessageCircle className="size-4" />
+                          Написать {toDative(stats.user.name)}
+                        </Button>
+                      )}
+
+                      {onResolve && (
+                        <Button variant="ghost" size="sm" onClick={() => onResolve(stats)}>
+                          Снять
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

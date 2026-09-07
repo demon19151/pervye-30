@@ -6,9 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "jest --config __tests__/jest.config.mjs",
+    "test:watch": "jest --config __tests__/jest.config.mjs --watch",
+    "test:coverage": "jest --config __tests__/jest.config.mjs --coverage"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

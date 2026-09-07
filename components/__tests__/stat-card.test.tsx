@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import { StatCard } from "./stat-card";
+import { StatCard } from "../stat-card";
 
 describe("StatCard", () => {
   it("отображает значение и подпись", () => {

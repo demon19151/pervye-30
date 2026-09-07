@@ -17,12 +17,13 @@ import {
   cancelCalendarEventResponse,
   getCalendarEvents,
   getCalendarEventsByDay,
+  getEventResponses,
   hasRespondedToEvent,
   removeCalendarEvent,
   respondToCalendarEvent,
   upsertCalendarEvent,
 } from "@/lib/services/calendarEventsService";
-import type { CalendarEvent } from "@/lib/types";
+import type { AppState, CalendarEvent } from "@/lib/types";
 
 export default function EventsPage() {
   return (
@@ -59,6 +60,7 @@ function EventsCalendar() {
   const [location, setLocation] = useState("");
   const [link, setLink] = useState("");
   const [description, setDescription] = useState("");
+  const [responsesOpenForEventId, setResponsesOpenForEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state || !currentUser) return;
@@ -172,6 +174,10 @@ function EventsCalendar() {
     toast.toast("Ок, не идёшь.", "info");
   };
 
+  const toggleResponses = (eventId: string) => {
+    setResponsesOpenForEventId((prev) => (prev === eventId ? null : eventId));
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -252,6 +258,17 @@ function EventsCalendar() {
                             <Trash2 className="size-3.5" />
                             Удалить
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleResponses(event.id)}
+                            aria-expanded={responsesOpenForEventId === event.id}
+                          >
+                            Кто ответил
+                          </Button>
+                          {responsesOpenForEventId === event.id ? (
+                            <EventResponsesDropdown state={state} eventId={event.id} />
+                          ) : null}
                         </div>
                       ) : (
                         <RespondButton
@@ -299,7 +316,21 @@ function EventsCalendar() {
                     hideDay
                     className="min-w-0 flex-1"
                   />
-                  {isCurator ? null : (
+                  {isCurator ? (
+                    <div className="shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleResponses(event.id)}
+                        aria-expanded={responsesOpenForEventId === event.id}
+                      >
+                        Кто ответил
+                      </Button>
+                      {responsesOpenForEventId === event.id ? (
+                        <EventResponsesDropdown state={state} eventId={event.id} compact />
+                      ) : null}
+                    </div>
+                  ) : (
                     <RespondButton
                       responded={hasRespondedToEvent(state, event.id, currentUser.id)}
                       onRespond={() => onRespond(event.id)}
@@ -561,6 +592,62 @@ function EventDetails({
       {event.description ? (
         <p className="break-all text-[14px] leading-relaxed text-muted [overflow-wrap:anywhere]">{event.description}</p>
       ) : null}
+    </div>
+  );
+}
+
+function EventResponsesDropdown({
+  state,
+  eventId,
+  compact = false,
+}: {
+  state: AppState;
+  eventId: string;
+  compact?: boolean;
+}) {
+  const participants = state.users.filter((user) => user.role === "participant");
+  const responses = getEventResponses(state, eventId);
+  const respondedIds = new Set(responses.map((item) => item.userId));
+
+  const responded = participants
+    .filter((user) => respondedIds.has(user.id))
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  const notResponded = participants
+    .filter((user) => !respondedIds.has(user.id))
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+
+  return (
+    <div
+      className={cn(
+        "mt-1 rounded-2xl bg-surface-muted p-3 ring-1 ring-inset ring-line text-[13px] text-muted",
+        compact ? "w-[280px]" : "w-[320px]",
+      )}
+    >
+      <div className="font-semibold text-foreground">Ответили: {responded.length}</div>
+      {responded.length ? (
+        <ul className="mt-2 space-y-1">
+          {responded.map((user) => (
+            <li key={user.id} className="truncate">
+              {user.name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-2 text-subtle">Пока никто</div>
+      )}
+
+      <div className="mt-3 font-semibold text-foreground">Ещё нет: {notResponded.length}</div>
+      {notResponded.length ? (
+        <ul className="mt-2 space-y-1">
+          {notResponded.map((user) => (
+            <li key={user.id} className="truncate">
+              {user.name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-2 text-subtle">Все ответили</div>
+      )}
     </div>
   );
 }

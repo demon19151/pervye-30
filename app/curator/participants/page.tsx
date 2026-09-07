@@ -1,16 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { Users } from "lucide-react";
+
 import { AppShell } from "@/components/layout/app-shell";
+import { MessageParticipantModal } from "@/components/message-participant-modal";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/participant-status";
 import { ProgressBar } from "@/components/progress-bar";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
-import { getAllParticipantStats } from "@/lib/services/statsService";
+import { useToast } from "@/components/ui/toast";
+import { ParticipantSummaryReflection } from "@/components/summary-reflection";
+import { ParticipantWeekAnswers, WeekStepAnswersCard } from "@/components/week-step-answers";
+import { addDirectMessage } from "@/lib/services/directMessageService";
+import { getSummaryReflection } from "@/lib/services/summaryService";
+import {
+  countSilentAnswerWeeks,
+  getAllParticipantStats,
+  getParticipantWeekRequiredProgress,
+  getParticipantWeekStepAnswers,
+  getSilentStepParticipants,
+  getWeekRequiredStepTracking,
+  getWeekStepAnswerTracking,
+  summarizeWeekTracking,
+} from "@/lib/services/statsService";
+import { getCurrentWeek } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
-import { cn } from "@/lib/utils";
+import type { User } from "@/lib/types";
+import { cn, toDative } from "@/lib/utils";
 
 export default function CuratorParticipantsPage() {
   return (
@@ -21,17 +40,54 @@ export default function CuratorParticipantsPage() {
 }
 
 function CuratorParticipants() {
-  const { state } = useAppStore();
+  const { state, currentUser, update } = useAppStore();
+  const { toast } = useToast();
+  const [week, setWeek] = useState<number | null>(null);
+  const [messageTo, setMessageTo] = useState<User | null>(null);
+  const [progressSort, setProgressSort] = useState<"high" | "low">("high");
 
-  if (!state) return null;
+  if (!state || !currentUser) return null;
 
-  const participants = getAllParticipantStats(state);
+  const participants = [...getAllParticipantStats(state)].sort((left, right) => {
+    const diff = left.progress - right.progress;
+    if (diff !== 0) return progressSort === "high" ? -diff : diff;
+    return left.user.name.localeCompare(right.user.name, "ru");
+  });
+  const currentWeek = getCurrentWeek(state);
+  const selectedWeek = week ?? currentWeek;
+  const tracking = getWeekStepAnswerTracking(state, selectedWeek);
+  const required = getWeekRequiredStepTracking(state, selectedWeek);
+  const summary = summarizeWeekTracking(tracking, required);
+  const silent = getSilentStepParticipants(state, selectedWeek);
+
+  const sendMessage = (text: string) => {
+    if (!messageTo) return;
+    const result = addDirectMessage(state, currentUser.id, messageTo.id, text);
+    if ("error" in result) {
+      toast(result.error, "warning");
+      return;
+    }
+    update(() => result.state);
+    toast(`Сообщение ушло ${toDative(messageTo.name)}.`);
+    setMessageTo(null);
+  };
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Участники"
-        subtitle="Прогресс и обязательные шаги каждого участника группы."
+        subtitle="Прогресс, обязательные шаги и ответы на вопросы недели."
+      />
+
+      <WeekStepAnswersCard
+        week={selectedWeek}
+        currentWeek={currentWeek}
+        tracking={tracking}
+        required={required}
+        summary={summary}
+        silent={silent}
+        onWeekChange={setWeek}
+        onWrite={setMessageTo}
       />
 
       {participants.length === 0 ? (
@@ -39,11 +95,42 @@ function CuratorParticipants() {
           <EmptyState
             icon={<Users className="size-5" />}
             title="В группе пока нет участников"
-            description={`Отправьте код ${state.group.inviteCode} — участники появятся здесь автоматически.`}
+            description="Отправьте код приглашения из настроек — участники появятся здесь автоматически."
           />
         </Card>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Участники</h2>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setProgressSort("high")}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  progressSort === "high"
+                    ? "bg-accent-soft text-accent-strong"
+                    : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
+                )}
+              >
+                Сначала выше %
+              </button>
+              <button
+                type="button"
+                onClick={() => setProgressSort("low")}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  progressSort === "low"
+                    ? "bg-accent-soft text-accent-strong"
+                    : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
+                )}
+              >
+                Сначала ниже %
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
           {participants.map((stats) => (
             <Card
               key={stats.user.id}
@@ -95,10 +182,29 @@ function CuratorParticipants() {
                   </ul>
                 </div>
               )}
+
+              <ParticipantWeekAnswers
+                answers={getParticipantWeekStepAnswers(state, stats.user.id, selectedWeek)}
+                required={getParticipantWeekRequiredProgress(state, stats.user.id, selectedWeek)}
+                silentWeeks={countSilentAnswerWeeks(state, stats.user.id, selectedWeek)}
+                onWrite={() => setMessageTo(stats.user)}
+              />
+
+              <ParticipantSummaryReflection
+                reflection={getSummaryReflection(state, stats.user.id)}
+              />
             </Card>
           ))}
+          </div>
         </div>
       )}
+
+      <MessageParticipantModal
+        open={Boolean(messageTo)}
+        participantName={messageTo?.name ?? ""}
+        onClose={() => setMessageTo(null)}
+        onSubmit={sendMessage}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ const tones: Record<ParticipantStatus, "success" | "caution" | "warning"> = {
   needs_support: "warning",
 };
 
-/** Жёлтый и оранжевый — только про внимание куратора, не про оценку человека. */
+/** Жёлтый и оранжевый — только про внимание наставника, не про оценку человека. */
 export function StatusBadge({ stats }: { stats: ParticipantStats }) {
   const tone = tones[stats.status];
 

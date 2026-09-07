@@ -1,37 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, RefreshCw, RotateCcw, Settings, Target } from "lucide-react";
+import { Archive, CalendarDays, LogOut, RefreshCw, RotateCcw, Settings, UsersRound } from "lucide-react";
 
-import { AccountFields } from "@/components/account-fields";
+import { DeleteAccountCard } from "@/components/delete-account-card";
 import { InviteCodeCard } from "@/components/invite-code-card";
-import { InviteKeyField } from "@/components/invite-key-field";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { ProgressBar } from "@/components/progress-bar";
+import { PasswordChangeCard } from "@/components/password-change-card";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { accountErrorMessage } from "@/lib/services/accountService";
 import {
+  archiveGroup,
   createGroup,
-  createRoom,
-  defaultGroupDraft,
+  isDemoGroup,
+  isEnrollmentOpen,
+  isGroupArchived,
+  removeParticipant,
   rotateInviteCode,
+  setEnrollmentOpen,
+  setProgramWeek,
   signOut,
   switchRole,
-  updateWeeklyGoal,
+  unarchiveGroup,
 } from "@/lib/services/groupService";
-import {
-  validateLogin,
-  validatePassword,
-  validatePasswordConfirm,
-} from "@/lib/services/accountService";
-import { generateInviteCode } from "@/lib/services/inviteCode";
+import { getCurrentWeek, getWeekBounds, getWeekCount } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
-import { attachAccount } from "@/lib/supabase/accounts";
-import { generateUniqueInviteCode } from "@/lib/supabase/persist";
+import { getAccountLogin } from "@/lib/supabase/accounts";
+import { deleteRemoteGroup, fetchState, generateUniqueInviteCode } from "@/lib/supabase/persist";
+import { cn, formatWeekRange, todayIsoDate } from "@/lib/utils";
 
 export default function CuratorSettingsPage() {
   return (
@@ -42,102 +45,73 @@ export default function CuratorSettingsPage() {
 }
 
 function CuratorSettings() {
-  const { state, update, updateAsync, reset } = useAppStore();
+  const { state, currentUser, update, hydrate, reset } = useAppStore();
   const { toast } = useToast();
   const router = useRouter();
 
   const [name, setName] = useState(state?.group.name ?? "");
   const [description, setDescription] = useState(state?.group.description ?? "");
   const [duration, setDuration] = useState(String(state?.group.duration ?? 30));
-  const [roomName, setRoomName] = useState(defaultGroupDraft.name);
-  const [roomDescription, setRoomDescription] = useState(defaultGroupDraft.description);
-  const [roomDuration, setRoomDuration] = useState(String(defaultGroupDraft.duration));
-  const [roomCode, setRoomCode] = useState(generateInviteCode);
-  const [roomLogin, setRoomLogin] = useState("");
-  const [roomPassword, setRoomPassword] = useState("");
-  const [roomPasswordConfirm, setRoomPasswordConfirm] = useState("");
-  const [refreshingCode, setRefreshingCode] = useState(false);
+  const [startDate, setStartDate] = useState(state?.group.programStartDate ?? todayIsoDate());
   const [rotating, setRotating] = useState(false);
-
-  const refreshRoomCode = useCallback(async () => {
-    setRefreshingCode(true);
-    try {
-      setRoomCode(await generateUniqueInviteCode());
-    } catch {
-      setRoomCode(generateInviteCode());
-    } finally {
-      setRefreshingCode(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshRoomCode();
-  }, [refreshRoomCode]);
+  const [login, setLogin] = useState<string | null>(null);
+  const [removeId, setRemoveId] = useState<string | null>(null);
 
   const groupId = state?.group.id;
   const groupName = state?.group.name;
   const groupDescription = state?.group.description;
   const groupDuration = state?.group.duration;
+  const groupStart = state?.group.programStartDate;
+  const userId = currentUser?.id;
 
   useEffect(() => {
     if (!groupName) return;
     setName(groupName);
     setDescription(groupDescription ?? "");
     setDuration(String(groupDuration ?? 30));
-  }, [groupId, groupName, groupDescription, groupDuration]);
+    setStartDate(groupStart ?? todayIsoDate());
+  }, [groupId, groupName, groupDescription, groupDuration, groupStart]);
 
-  if (!state) return null;
+  useEffect(() => {
+    if (!userId) return;
+    void getAccountLogin(userId)
+      .then(setLogin)
+      .catch(() => setLogin(null));
+  }, [userId]);
 
-  const goal = state.group.weeklyGoal;
+  if (!state || !currentUser) return null;
+
+  const demo = isDemoGroup(state.group);
+  const archived = isGroupArchived(state.group);
+  const enrollmentOpen = isEnrollmentOpen(state.group);
+  const participants = state.users.filter((user) => user.role === "participant");
+  const removeTarget = participants.find((user) => user.id === removeId);
+  const weekCount = getWeekCount(state.group.duration);
+  const currentWeek = getCurrentWeek(state);
+  const weekBounds = getWeekBounds(currentWeek, state.group.duration);
+  const weekRange = formatWeekRange(
+    state.group.programStartDate,
+    weekBounds.start,
+    weekBounds.end,
+  );
 
   const handleSave = (event: React.FormEvent) => {
     event.preventDefault();
-
-    update((current) => createGroup(current, { name, description, duration: Number(duration) }));
+    update((current) =>
+      createGroup(current, {
+        name,
+        description,
+        duration: Number(duration),
+        programStartDate: startDate,
+      }),
+    );
     toast("Настройки группы сохранены");
   };
 
-  const handleCreateRoom = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    const problem =
-      validateLogin(roomLogin) ??
-      validatePassword(roomPassword) ??
-      validatePasswordConfirm(roomPassword, roomPasswordConfirm);
-
-    if (problem) {
-      toast(problem);
-      return;
-    }
-
-    try {
-      const next = await updateAsync((current) =>
-        createRoom(current, {
-          name: roomName,
-          description: roomDescription,
-          duration: Number(roomDuration) || defaultGroupDraft.duration,
-          inviteCode: roomCode,
-        }),
-      );
-
-      if (!next?.session?.userId) {
-        throw new Error("Не удалось создать комнату.");
-      }
-
-      await attachAccount({
-        userId: next.session.userId,
-        login: roomLogin,
-        password: roomPassword,
-      });
-
-      toast("Новая комната и аккаунт созданы");
-      setRoomLogin("");
-      setRoomPassword("");
-      setRoomPasswordConfirm("");
-      void refreshRoomCode();
-    } catch (cause) {
-      toast(cause instanceof Error ? cause.message : "Не удалось создать комнату.");
-    }
+  const handleWeekChange = (week: number) => {
+    if (week === currentWeek) return;
+    update((current) => setProgramWeek(current, week));
+    toast(`Сейчас неделя ${week}`);
   };
 
   const handleRotateCode = async () => {
@@ -153,218 +127,276 @@ function CuratorSettings() {
     }
   };
 
+  const handleRemove = async () => {
+    if (!removeId) return;
+    update((current) => removeParticipant(current, removeId));
+    setRemoveId(null);
+    toast("Участник убран из комнаты");
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteRemoteGroup(state.group.id);
+      const next = await fetchState();
+      hydrate({ ...next, session: null });
+      toast("Аккаунт и комната удалены");
+      router.push("/");
+    } catch (cause) {
+      toast(accountErrorMessage(cause));
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <PageHeader title="Настройки" subtitle="Параметры комнаты, ключ приглашения и новые группы." />
+      <PageHeader title="Настройки" subtitle="Параметры комнаты, набор участников и аккаунт наставника." />
 
       <div className="grid gap-5 lg:grid-cols-5">
         <div className="space-y-5 lg:col-span-3">
-        <Card className="p-5 sm:p-6">
-          <CardHeader
-            icon={<Settings className="size-5" />}
-            title="Группа"
-            description="Название и описание видят все участники."
-          />
+          <Card className="p-5 sm:p-6">
+            <CardHeader
+              icon={<Settings className="size-5" />}
+              title="Группа"
+              description="Название, описание и дата старта видят все участники."
+            />
 
-          <form onSubmit={handleSave} className="mt-5 space-y-4">
-            <Field label="Название группы" htmlFor="settings-name">
-              <Input
-                id="settings-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={80}
-              />
-            </Field>
+            <form onSubmit={handleSave} className="mt-5 space-y-4">
+              <Field label="Название группы" htmlFor="settings-name">
+                <Input
+                  id="settings-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={80}
+                />
+              </Field>
 
-            <Field label="Описание" htmlFor="settings-description">
-              <Textarea
-                id="settings-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                maxLength={240}
-              />
-            </Field>
+              <Field label="Описание" htmlFor="settings-description">
+                <Textarea
+                  id="settings-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  maxLength={240}
+                />
+              </Field>
 
-            <Field
-              label="Длительность"
-              htmlFor="settings-duration"
-              hint={`Сейчас идёт день ${state.group.currentDay} — длительность нельзя сделать меньше.`}
+              <Field
+                label="Дата старта"
+                htmlFor="settings-start"
+                hint="День 1 программы. От неё считаются недели и календарь мероприятий."
+              >
+                <Input
+                  id="settings-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="max-w-52"
+                />
+              </Field>
+
+              <Field
+                label="Длительность"
+                htmlFor="settings-duration"
+                hint={`Сейчас идёт день ${state.group.currentDay} — длительность нельзя сделать меньше.`}
+              >
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="settings-duration"
+                    type="number"
+                    min={state.group.currentDay}
+                    max={90}
+                    value={duration}
+                    onChange={(event) => setDuration(event.target.value)}
+                    className="max-w-28"
+                  />
+                  <span className="text-sm text-muted">дней</span>
+                </div>
+              </Field>
+
+              <Button type="submit" disabled={name.trim().length < 3}>
+                Сохранить
+              </Button>
+            </form>
+          </Card>
+
+          <Card className="p-5 sm:p-6">
+            <CardHeader
+              icon={<UsersRound className="size-5" />}
+              title="Состав комнаты"
+              description="Убрать человека — удалятся его аккаунт и ответы."
+            />
+            {participants.length === 0 ? (
+              <p className="mt-5 text-sm text-muted">Пока никого нет. Когда войдут по ключу, список появится здесь.</p>
+            ) : (
+              <ul className="mt-5 space-y-2">
+                {participants.map((user) => (
+                  <li
+                    key={user.id}
+                    className="flex items-center gap-3 rounded-2xl bg-surface-muted px-3 py-2.5 ring-1 ring-inset ring-line"
+                  >
+                    <Avatar name={user.name} emoji={user.avatar} size="sm" />
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium">{user.name}</p>
+                    <Button variant="ghost" size="sm" onClick={() => setRemoveId(user.id)}>
+                      Убрать
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {userId ? <PasswordChangeCard userId={userId} hasLogin={Boolean(login)} /> : null}
+
+          <Card className="p-5 sm:p-6">
+            <CardHeader
+              icon={<Archive className="size-5" />}
+              title={archived ? "Программа завершена" : "Завершить программу"}
+              description={
+                archived
+                  ? "Комната сохранена, набор закрыт. Можно снова открыть, если завершили рано."
+                  : "Комната останется со всеми данными. Новые люди по ключу войти не смогут."
+              }
+            />
+            <Button
+              className="mt-5"
+              variant={archived ? "outline" : "warning"}
+              onClick={() => {
+                update((current) => (archived ? unarchiveGroup(current) : archiveGroup(current)));
+                toast(archived ? "Программа снова открыта" : "Программа завершена. Комната сохранена.");
+              }}
             >
-              <div className="flex items-center gap-3">
-                <Input
-                  id="settings-duration"
-                  type="number"
-                  min={state.group.currentDay}
-                  max={90}
-                  value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
-                  className="max-w-28"
-                />
-                <span className="text-sm text-muted">дней</span>
-              </div>
-            </Field>
-
-            <Button type="submit" disabled={name.trim().length < 3}>
-              Сохранить
+              {archived ? "Возобновить программу" : "Завершить программу"}
             </Button>
-          </form>
-        </Card>
+          </Card>
 
-        <Card className="p-5 sm:p-6">
-          <CardHeader
-            icon={<KeyRound className="size-5" />}
-            title="Новая комната"
-            description="Отдельная группа с новым ключом. Текущая комната останется в базе."
+          <DeleteAccountCard
+            role="curator"
+            locked={demo}
+            lockHint="Демо-комнату нельзя удалить. Сбросьте демо-данные, если нужна чистая копия."
+            onConfirm={handleDeleteAccount}
           />
-
-          <form onSubmit={handleCreateRoom} className="mt-5 space-y-4">
-            <Field label="Название" htmlFor="room-name">
-              <Input
-                id="room-name"
-                value={roomName}
-                onChange={(event) => setRoomName(event.target.value)}
-                maxLength={80}
-              />
-            </Field>
-
-            <Field label="Описание" htmlFor="room-description">
-              <Textarea
-                id="room-description"
-                value={roomDescription}
-                onChange={(event) => setRoomDescription(event.target.value)}
-                maxLength={240}
-              />
-            </Field>
-
-            <Field label="Длительность" htmlFor="room-duration">
-              <div className="flex items-center gap-3">
-                <Input
-                  id="room-duration"
-                  type="number"
-                  min={7}
-                  max={90}
-                  value={roomDuration}
-                  onChange={(event) => setRoomDuration(event.target.value)}
-                  className="max-w-28"
-                />
-                <span className="text-sm text-muted">дней</span>
-              </div>
-            </Field>
-
-            <InviteKeyField
-              code={roomCode}
-              onRefresh={() => void refreshRoomCode()}
-              refreshing={refreshingCode}
-            />
-
-            <AccountFields
-              login={roomLogin}
-              password={roomPassword}
-              passwordConfirm={roomPasswordConfirm}
-              onLoginChange={setRoomLogin}
-              onPasswordChange={setRoomPassword}
-              onPasswordConfirmChange={setRoomPasswordConfirm}
-            />
-
-            <Button type="submit" disabled={roomName.trim().length < 3}>
-              Создать комнату
-            </Button>
-          </form>
-        </Card>
         </div>
 
         <div className="space-y-5 lg:col-span-2">
           <InviteCodeCard
             code={state.group.inviteCode}
-            footer={
-              <Button variant="outline" size="sm" onClick={() => void handleRotateCode()} disabled={rotating}>
-                <RefreshCw className="size-4" />
-                Новый ключ
-              </Button>
+            description={
+              enrollmentOpen
+                ? "Отправьте код участникам — по нему они войдут в группу."
+                : "Набор закрыт. По этому ключу новые люди войти не могут."
             }
-          />
-
-          {goal && (
-            <Card className="p-5 sm:p-6">
-              <CardHeader
-                icon={<Target className="size-5" />}
-                title="Цель недели"
-                description={goal.title}
-              />
-
-              <ProgressBar
-                value={(goal.done / goal.target) * 100}
-                label="Выполнено"
-                hint={`${goal.done} / ${goal.target}`}
-                tone={goal.done >= goal.target ? "success" : "accent"}
-                className="mt-5"
-              />
-
-              <div className="mt-4 flex gap-2">
+            footer={
+              <>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={goal.done === 0}
-                  onClick={() => update((current) => updateWeeklyGoal(current, goal.done - 1))}
+                  onClick={() => {
+                    if (archived) return;
+                    update((current) => setEnrollmentOpen(current, !enrollmentOpen));
+                    toast(enrollmentOpen ? "Набор закрыт" : "Набор снова открыт");
+                  }}
+                  disabled={archived}
                 >
-                  −1
+                  {enrollmentOpen ? "Закрыть набор" : "Открыть набор"}
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={goal.done >= goal.target}
-                  onClick={() => update((current) => updateWeeklyGoal(current, goal.done + 1))}
-                >
-                  +1
+                <Button variant="outline" size="sm" onClick={() => void handleRotateCode()} disabled={rotating}>
+                  <RefreshCw className="size-4" />
+                  Новый ключ
                 </Button>
-              </div>
-            </Card>
-          )}
+              </>
+            }
+          />
 
           <Card className="p-5 sm:p-6">
             <CardHeader
-              title="Демонстрация"
-              description="Сброс удаляет все комнаты в базе и возвращает демо-группу."
+              icon={<CalendarDays className="size-5" />}
+              title="Неделя программы"
+              description={`Сейчас неделя ${currentWeek}: дни ${weekBounds.start}–${weekBounds.end}${
+                weekRange ? `. ${weekRange}` : ""
+              }`}
             />
 
-            <div className="mt-5 flex flex-col gap-2">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => {
-                  update((current) => switchRole(current, "participant"));
-                  router.push("/participant");
-                }}
-              >
-                Перейти в режим участника
-              </Button>
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => {
-                  reset();
-                  toast("Демо-данные сброшены");
-                  router.push("/");
-                }}
-              >
-                <RotateCcw className="size-4" />
-                Сбросить демо-данные
-              </Button>
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => {
-                  update(signOut);
-                  router.push("/");
-                }}
-              >
-                <LogOut className="size-4" />
-                Выйти
-              </Button>
+            <div className="mt-5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2">
+              {Array.from({ length: weekCount }, (_, index) => index + 1).map((week) => (
+                <button
+                  key={week}
+                  type="button"
+                  onClick={() => handleWeekChange(week)}
+                  className={cn(
+                    "rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
+                    week === currentWeek
+                      ? "bg-accent text-white"
+                      : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
+                  )}
+                >
+                  Неделя {week}
+                </button>
+              ))}
             </div>
           </Card>
+
+          {demo ? (
+            <Card className="p-5 sm:p-6">
+              <CardHeader
+                title="Демонстрация"
+                description="Сброс удаляет все комнаты в базе и возвращает демо-группу."
+              />
+
+              <div className="mt-5 flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => {
+                    update((current) => switchRole(current, "participant"));
+                    router.push("/participant");
+                  }}
+                >
+                  Перейти в режим участника
+                </Button>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => {
+                    reset();
+                    toast("Демо-данные сброшены");
+                    router.push("/");
+                  }}
+                >
+                  <RotateCcw className="size-4" />
+                  Сбросить демо-данные
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={() => {
+              update(signOut);
+              router.push("/");
+            }}
+          >
+            <LogOut className="size-4" />
+            Выйти
+          </Button>
         </div>
       </div>
+
+      <Modal
+        open={Boolean(removeTarget)}
+        onClose={() => setRemoveId(null)}
+        title={removeTarget ? `Убрать ${removeTarget.name}?` : "Убрать участника"}
+        description="Аккаунт, ответы на шаги и переписка этого человека удалятся из комнаты."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRemoveId(null)}>
+              Отмена
+            </Button>
+            <Button variant="danger" onClick={() => void handleRemove()}>
+              Убрать
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

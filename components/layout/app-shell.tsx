@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
 import { BottomNavigation } from "@/components/layout/bottom-navigation";
@@ -16,10 +16,9 @@ import {
   getUnreadCuratorReplies,
   getWaitingStudentCount,
 } from "@/lib/services/directMessageService";
-import { switchRole } from "@/lib/services/groupService";
+import { isGroupArchived, switchRole } from "@/lib/services/groupService";
 import { useAppStore } from "@/lib/store/app-store";
 import type { UserRole } from "@/lib/types";
-import { BotChatLauncher } from "@/components/bot-chat/bot-chat-launcher";
 
 /**
  * Общий каркас приватных страниц: sidebar на десктопе,
@@ -29,13 +28,12 @@ export function AppShell({
   role,
   children,
 }: {
-  /** Если роль не указана, раздел доступен и участнику, и куратору. */
+  /** Если роль не указана, раздел доступен и участнику, и наставнику. */
   role?: UserRole;
   children: ReactNode;
 }) {
   const { state, ready, error, currentUser, update } = useAppStore();
   const router = useRouter();
-  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -68,7 +66,7 @@ export function AppShell({
         <Card className="w-full p-6 text-center">
           <h1 className="text-lg font-semibold">Этот раздел доступен другой роли</h1>
           <p className="mt-2 text-sm text-muted">
-            Сейчас вы в системе как {currentUser.role === "curator" ? "куратор" : "участник"}.
+            Сейчас вы в системе как {currentUser.role === "curator" ? "наставник" : "участник"}.
             Переключитесь, чтобы продолжить.
           </p>
           <Button
@@ -76,7 +74,7 @@ export function AppShell({
             fullWidth
             onClick={() => update((current) => switchRole(current, role))}
           >
-            Продолжить как {role === "curator" ? "куратор" : "участник"}
+            Продолжить как {role === "curator" ? "наставник" : "участник"}
           </Button>
         </Card>
       </div>
@@ -84,7 +82,7 @@ export function AppShell({
   }
 
   const items = navForRole(currentUser.role);
-  const subtitle = currentUser.role === "curator" ? "Панель куратора" : state.group.name;
+  const subtitle = currentUser.role === "curator" ? "Панель наставника" : state.group.name;
   const eventBadge =
     currentUser.role === "participant" ? getUnseenCalendarEventCount(state, currentUser.id) : 0;
   const askBadge =
@@ -148,12 +146,16 @@ export function AppShell({
 
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:py-10">
+          {isGroupArchived(state.group) ? (
+            <p className="mb-5 rounded-2xl bg-warning-soft/80 px-4 py-3 text-[13px] text-warning">
+              Программа завершена. Комната сохранена, новые участники по ключу войти не могут.
+            </p>
+          ) : null}
           {children}
         </div>
       </main>
 
       <BottomNavigation items={items} />
-      {currentUser.role === "participant" && pathname !== "/ask" ? <BotChatLauncher /> : null}
     </div>
   );
 }

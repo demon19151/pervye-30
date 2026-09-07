@@ -1,42 +1,27 @@
 import { createId } from "../storage";
-import type { AppState, Task, TaskAnswer, TaskCompletion, TaskKind } from "../types";
+import type { AppState, Task, TaskAnswer, TaskAnswerOption, TaskCompletion, TaskKind } from "../types";
 
 export type CreateTaskInput = {
   week: number;
   title: string;
   description: string;
   kind?: TaskKind;
+  answerOptions?: TaskAnswerOption[];
 };
 
-export const TASK_KINDS: TaskKind[] = ["required", "recommended", "question", "status"];
+export const TASK_KINDS: TaskKind[] = ["required", "recommended", "question"];
 
 export const TASK_KIND_LABELS: Record<TaskKind, string> = {
   required: "Обязательно",
   recommended: "Рекомендуем",
   question: "Вопрос",
-  status: "Статус",
 };
 
 const KIND_ORDER: Record<TaskKind, number> = {
   required: 0,
   question: 1,
-  status: 2,
-  recommended: 3,
+  recommended: 2,
 };
-
-export const QUESTION_ANSWERS: Array<{ value: Extract<TaskAnswer, "yes" | "no">; label: string }> = [
-  { value: "yes", label: "Да, понимаю" },
-  { value: "no", label: "Пока нет" },
-];
-
-export const STATUS_ANSWERS: Array<{
-  value: Extract<TaskAnswer, "clear" | "question" | "help">;
-  label: string;
-}> = [
-  { value: "clear", label: "Всё понятно" },
-  { value: "question", label: "Есть вопрос" },
-  { value: "help", label: "Нужна помощь" },
-];
 
 export function getTaskKind(task: Task): TaskKind {
   return task.kind ?? "required";
@@ -46,15 +31,75 @@ export function isRequiredTask(task: Task): boolean {
   return getTaskKind(task) === "required";
 }
 
-export function getAnswerLabel(answer?: TaskAnswer): string | undefined {
-  if (!answer) return undefined;
-  const fromQuestion = QUESTION_ANSWERS.find((item) => item.value === answer);
-  if (fromQuestion) return fromQuestion.label;
-  return STATUS_ANSWERS.find((item) => item.value === answer)?.label;
+export const QUESTION_ANSWERS: TaskAnswerOption[] = [
+  { id: "yes", label: "Да, понимаю" },
+  { id: "no", label: "Пока нет", needsAttention: true },
+];
+
+export const STATUS_ANSWERS: TaskAnswerOption[] = [
+  { id: "clear", label: "Всё понятно" },
+  { id: "question", label: "Есть вопрос", needsAttention: true },
+  { id: "help", label: "Нужна помощь", needsAttention: true },
+];
+
+export const MIN_ANSWER_OPTIONS = 2;
+export const MAX_ANSWER_OPTIONS = 4;
+export const MAX_ANSWER_NOTE = 400;
+
+export function normalizeAnswerNote(note?: string): string | undefined {
+  const text = note?.trim() ?? "";
+  if (!text) return undefined;
+  return text.slice(0, MAX_ANSWER_NOTE);
 }
 
-export function needsCuratorAttention(answer?: TaskAnswer): boolean {
+export function defaultAnswerOptions(kind: TaskKind): TaskAnswerOption[] {
+  if (kind === "question") return QUESTION_ANSWERS.map((item) => ({ ...item }));
+  return [];
+}
+
+export function getTaskAnswerOptions(task: Task): TaskAnswerOption[] {
+  if (!isAnswerTask(task)) return [];
+  if (task.answerOptions && task.answerOptions.length >= MIN_ANSWER_OPTIONS) {
+    return task.answerOptions;
+  }
+  return defaultAnswerOptions(getTaskKind(task));
+}
+
+export function normalizeAnswerOptions(options: TaskAnswerOption[] | undefined): TaskAnswerOption[] {
+  return (options ?? [])
+    .map((item) => ({
+      id: item.id.trim() || createId("ao"),
+      label: item.label.trim(),
+      needsAttention: Boolean(item.needsAttention),
+    }))
+    .filter((item) => item.label.length > 0);
+}
+
+export function getAnswerLabel(answer?: TaskAnswer, task?: Task): string | undefined {
+  if (!answer) return undefined;
+  if (task) {
+    const fromTask = getTaskAnswerOptions(task).find((item) => item.id === answer);
+    if (fromTask) return fromTask.label;
+  }
+  const fromDefaults = [...QUESTION_ANSWERS, ...STATUS_ANSWERS].find((item) => item.id === answer);
+  return fromDefaults?.label ?? answer;
+}
+
+export function needsCuratorAttention(answer?: TaskAnswer, task?: Task): boolean {
+  if (!answer) return false;
+  if (task) {
+    const option = getTaskAnswerOptions(task).find((item) => item.id === answer);
+    if (option) return Boolean(option.needsAttention);
+  }
   return answer === "no" || answer === "question" || answer === "help";
+}
+
+export function isAnswerTask(task: Task): boolean {
+  return getTaskKind(task) === "question";
+}
+
+export function getWeekAnswerTasks(state: AppState, week: number): Task[] {
+  return getTasksByWeek(state, week).filter(isAnswerTask);
 }
 
 export function getWeekCount(duration: number): number {
@@ -117,15 +162,19 @@ export function completeWeekTask(
   taskId: string,
   userId: string,
   answer?: TaskAnswer,
+  note?: string,
 ): AppState {
   if (!state.tasks.some((task) => task.id === taskId)) return state;
 
+  const answerNote = normalizeAnswerNote(note);
   const existing = getTaskCompletion(state, taskId, userId);
   if (existing) {
     return {
       ...state,
       taskCompletions: (state.taskCompletions ?? []).map((item) =>
-        item.id === existing.id ? { ...item, answer, createdAt: new Date().toISOString() } : item,
+        item.id === existing.id
+          ? { ...item, answer, answerNote, createdAt: new Date().toISOString() }
+          : item,
       ),
     };
   }
@@ -136,6 +185,7 @@ export function completeWeekTask(
     userId,
     createdAt: new Date().toISOString(),
     answer,
+    ...(answerNote ? { answerNote } : {}),
   };
 
   return {
@@ -174,6 +224,19 @@ export function addTask(
     return { error: "Выберите тип задания." };
   }
 
+  const isAnswer = kind === "question";
+  const answerOptions = isAnswer
+    ? normalizeAnswerOptions(input.answerOptions?.length ? input.answerOptions : defaultAnswerOptions(kind))
+    : undefined;
+
+  if (isAnswer && answerOptions && answerOptions.length < MIN_ANSWER_OPTIONS) {
+    return { error: `Для ответа нужны минимум ${MIN_ANSWER_OPTIONS} кнопки.` };
+  }
+
+  if (isAnswer && answerOptions && answerOptions.length > MAX_ANSWER_OPTIONS) {
+    return { error: `Можно не больше ${MAX_ANSWER_OPTIONS} кнопок ответа.` };
+  }
+
   const task: Task = {
     id: createId("t"),
     groupId: state.group.id,
@@ -181,6 +244,7 @@ export function addTask(
     kind,
     title,
     description: input.description.trim(),
+    ...(answerOptions ? { answerOptions } : {}),
   };
 
   return { state: { ...state, tasks: [...state.tasks, task] }, task };

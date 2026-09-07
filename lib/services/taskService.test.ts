@@ -9,6 +9,8 @@ import {
   getWeekBounds,
   getWeekCount,
   hasCompletedTask,
+  isAnswerTask,
+  needsCuratorAttention,
   removeTask,
   undoWeekTask,
 } from "./taskService";
@@ -54,6 +56,40 @@ describe("taskService", () => {
         );
       }
     });
+
+    it("создаёт вопрос с кнопками ответа куратора", () => {
+      const state = createInitialState();
+      const result = addTask(state, {
+        week: 1,
+        title: "Понятно ли расписание?",
+        description: "",
+        kind: "question",
+        answerOptions: [
+          { id: "ok", label: "Да, всё ясно" },
+          { id: "stuck", label: "Нужна подсказка", needsAttention: true },
+        ],
+      });
+
+      expect("task" in result).toBe(true);
+      if ("task" in result) {
+        expect(result.task.answerOptions).toEqual([
+          { id: "ok", label: "Да, всё ясно", needsAttention: false },
+          { id: "stuck", label: "Нужна подсказка", needsAttention: true },
+        ]);
+      }
+    });
+
+    it("не сохраняет вопрос без двух кнопок", () => {
+      const state = createInitialState();
+      const result = addTask(state, {
+        week: 1,
+        title: "Понятно ли расписание?",
+        description: "",
+        kind: "question",
+        answerOptions: [{ id: "only", label: "Одна кнопка" }],
+      });
+      expect("error" in result).toBe(true);
+    });
   });
 
   it("completeWeekTask и undoWeekTask отмечают шаг независимо от дня", () => {
@@ -66,6 +102,62 @@ describe("taskService", () => {
 
     const undone = undoWeekTask(done, task.id, "u-anna");
     expect(hasCompletedTask(undone, task.id, "u-anna")).toBe(false);
+  });
+
+  it("completeWeekTask сохраняет комментарий к вопросу", () => {
+    const state = createInitialState();
+    const question = state.tasks.find((task) => task.kind === "question");
+    if (!question) throw new Error("expected question task");
+
+    const done = completeWeekTask(state, question.id, "u-anna", "ok", "  Не нашла аудиторию  ");
+    const completion = done.taskCompletions.find(
+      (item) => item.taskId === question.id && item.userId === "u-anna",
+    );
+
+    expect(completion?.answer).toBe("ok");
+    expect(completion?.answerNote).toBe("Не нашла аудиторию");
+  });
+
+  it("completeWeekTask обрезает слишком длинный комментарий", () => {
+    const state = createInitialState();
+    const question = state.tasks.find((task) => task.kind === "question");
+    if (!question) throw new Error("expected question task");
+
+    const done = completeWeekTask(state, question.id, "u-anna", "ok", "ж".repeat(500));
+    const completion = done.taskCompletions.find(
+      (item) => item.taskId === question.id && item.userId === "u-anna",
+    );
+
+    expect(completion?.answerNote?.length).toBe(400);
+  });
+
+  it("isAnswerTask отмечает вопросы недели", () => {
+    const state = createInitialState();
+    const question = state.tasks.find((task) => task.id === "t-w1-7");
+    const checkIn = state.tasks.find((task) => task.id === "t-w2-4");
+    const required = state.tasks.find((task) => task.id === "t-w1-1");
+
+    expect(question && isAnswerTask(question)).toBe(true);
+    expect(checkIn && isAnswerTask(checkIn)).toBe(true);
+    expect(required && isAnswerTask(required)).toBe(false);
+  });
+
+  it("needsCuratorAttention смотрит на кнопки задания", () => {
+    const task = {
+      id: "t-custom",
+      groupId: "g-work",
+      week: 1,
+      kind: "question" as const,
+      title: "Вопрос",
+      description: "",
+      answerOptions: [
+        { id: "ok", label: "Ок" },
+        { id: "stuck", label: "Застрял", needsAttention: true },
+      ],
+    };
+
+    expect(needsCuratorAttention("stuck", task)).toBe(true);
+    expect(needsCuratorAttention("ok", task)).toBe(false);
   });
 
   it("removeTask удаляет задание и его отметки", () => {

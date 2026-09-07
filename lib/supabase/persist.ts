@@ -13,10 +13,13 @@ import type {
   SupportSignal,
   Task,
   TaskAnswer,
+  TaskAnswerOption,
   TaskCompletion,
   User,
   UserRole,
+  SummaryReflection,
 } from "../types";
+import { STATUS_ANSWERS } from "../services/taskService";
 import { getSupabase } from "./client";
 
 const SESSION_KEY = "pervye-30:session";
@@ -29,6 +32,8 @@ type GroupRow = {
   duration: number;
   current_day: number;
   program_start_date: string | null;
+  enrollment_open: boolean | null;
+  archived_at: string | null;
   curator_id: string;
   weekly_goal_title: string | null;
   weekly_goal_target: number | null;
@@ -67,6 +72,8 @@ function mapGroup(row: GroupRow): Group {
     duration: row.duration,
     currentDay: row.current_day,
     programStartDate: row.program_start_date ?? undefined,
+    enrollmentOpen: row.enrollment_open !== false,
+    archivedAt: row.archived_at ?? undefined,
     curatorId: row.curator_id,
     weeklyGoal:
       row.weekly_goal_title && row.weekly_goal_target != null && row.weekly_goal_done != null
@@ -79,6 +86,19 @@ function mapGroup(row: GroupRow): Group {
   };
 }
 
+function parseAnswerOptions(value: unknown): TaskAnswerOption[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const options = value.flatMap((item): TaskAnswerOption[] => {
+    if (!item || typeof item !== "object") return [];
+    const record = item as Record<string, unknown>;
+    const id = typeof record.id === "string" ? record.id.trim() : "";
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+    if (!id || !label) return [];
+    return [{ id, label, needsAttention: Boolean(record.needsAttention) }];
+  });
+  return options.length >= 2 ? options : undefined;
+}
+
 function groupRow(group: Group) {
   return {
     id: group.id,
@@ -88,6 +108,8 @@ function groupRow(group: Group) {
     duration: group.duration,
     current_day: group.currentDay,
     program_start_date: group.programStartDate ?? null,
+    enrollment_open: group.enrollmentOpen !== false,
+    archived_at: group.archivedAt ?? null,
     curator_id: group.curatorId,
     weekly_goal_title: group.weeklyGoal?.title ?? null,
     weekly_goal_target: group.weeklyGoal?.target ?? null,
@@ -185,6 +207,7 @@ function emptyRelatedState(base: AppState): AppState {
     calendarEvents: [],
     calendarEventResponses: [],
     calendarEventViews: [],
+    summaryReflections: [],
     session: null,
   };
 }
@@ -213,7 +236,7 @@ async function assembleState(groupId: string): Promise<AppState> {
   const userIds = (users.data ?? []).map((row) => row.id as string);
   const eventIds = (events.data ?? []).map((row) => row.id as string);
 
-  const [completions, signals, responses, views] = await Promise.all([
+  const [completions, signals, responses, views, reflections] = await Promise.all([
     userIds.length
       ? db.from("task_completions").select("*").in("user_id", userIds)
       : Promise.resolve({ data: [], error: null }),
@@ -226,9 +249,12 @@ async function assembleState(groupId: string): Promise<AppState> {
     userIds.length
       ? db.from("calendar_event_views").select("*").in("user_id", userIds)
       : Promise.resolve({ data: [], error: null }),
+    userIds.length
+      ? db.from("summary_reflections").select("*").in("user_id", userIds)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  for (const result of [completions, signals, responses, views]) {
+  for (const result of [completions, signals, responses, views, reflections]) {
     throwIfError(result.error, "load");
   }
 
@@ -242,20 +268,33 @@ async function assembleState(groupId: string): Promise<AppState> {
       avatar: (row.avatar as string | null) ?? undefined,
       groupId: row.group_id as string,
     })),
-    tasks: (tasks.data ?? []).map((row) => ({
-      id: row.id as string,
-      groupId: row.group_id as string,
-      week: row.week as number,
-      kind: row.kind as Task["kind"],
-      title: row.title as string,
-      description: row.description as string,
-    })),
+    tasks: (tasks.data ?? []).map((row) => {
+      const storedKind = row.kind as string;
+      const kind: Task["kind"] =
+        storedKind === "recommended" || storedKind === "question" || storedKind === "required"
+          ? storedKind
+          : "question";
+      return {
+        id: row.id as string,
+        groupId: row.group_id as string,
+        week: row.week as number,
+        kind,
+        title: row.title as string,
+        description: row.description as string,
+        answerOptions:
+          parseAnswerOptions(row.answer_options) ??
+          (storedKind === "status" ? STATUS_ANSWERS.map((item) => ({ ...item })) : undefined),
+      };
+    }),
     taskCompletions: (completions.data ?? []).map((row) => ({
       id: row.id as string,
       taskId: row.task_id as string,
       userId: row.user_id as string,
       createdAt: row.created_at as string,
       answer: (row.answer as TaskAnswer | null) ?? undefined,
+      answerNote: typeof row.answer_note === "string" && row.answer_note.trim()
+        ? row.answer_note.trim()
+        : undefined,
     })),
     messages: (messages.data ?? []).map((row) => ({
       id: row.id as string,
@@ -310,6 +349,14 @@ async function assembleState(groupId: string): Promise<AppState> {
       userId: row.user_id as string,
       lastSeenAt: row.last_seen_at as string,
     })),
+    summaryReflections: (reflections.data ?? []).map((row) => ({
+      id: row.id as string,
+      userId: row.user_id as string,
+      mentorNote: (row.mentor_note as string | null) ?? "",
+      useful: (row.useful as string | null) ?? "",
+      unclear: (row.unclear as string | null) ?? "",
+      updatedAt: row.updated_at as string,
+    })),
     session: loadSession(),
   };
 }
@@ -349,6 +396,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     kind: task.kind,
     title: task.title,
     description: task.description,
+    answer_options: task.answerOptions ?? null,
   }));
 
   await syncById<TaskCompletion>("task_completions", previous.taskCompletions, next.taskCompletions, (item) => ({
@@ -357,6 +405,7 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     user_id: item.userId,
     created_at: item.createdAt,
     answer: item.answer ?? null,
+    answer_note: item.answerNote ?? null,
   }));
 
   await syncById<Message>("messages", previous.messages, next.messages, (item) => ({
@@ -445,7 +494,32 @@ export async function persistState(prev: AppState, next: AppState): Promise<void
     throwIfError(error, "upsert calendar_event_views");
   }
 
+  await syncById<SummaryReflection>(
+    "summary_reflections",
+    previous.summaryReflections ?? [],
+    next.summaryReflections ?? [],
+    (item) => ({
+      id: item.id,
+      user_id: item.userId,
+      mentor_note: item.mentorNote,
+      useful: item.useful,
+      unclear: item.unclear,
+      updated_at: item.updatedAt,
+    }),
+  );
+
   saveSession(next.session);
+}
+
+export async function deleteRemoteGroup(groupId: string): Promise<void> {
+  if (groupId === GROUP_ID) {
+    throw new Error("DEMO_ROOM_LOCKED");
+  }
+
+  const db = getSupabase();
+  const { error } = await db.from("groups").delete().eq("id", groupId);
+  throwIfError(error, "delete group");
+  saveSession(null);
 }
 
 export async function resetRemoteState(): Promise<AppState> {
@@ -460,6 +534,7 @@ export async function resetRemoteState(): Promise<AppState> {
     "direct_messages",
     "signals",
     "announcements",
+    "summary_reflections",
     "users",
     "groups",
   ];
@@ -484,6 +559,7 @@ export async function resetRemoteState(): Promise<AppState> {
       calendarEvents: [],
       calendarEventResponses: [],
       calendarEventViews: [],
+      summaryReflections: [],
       session: null,
     },
     { ...fresh, session: null },

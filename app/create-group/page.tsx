@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ListChecks, Sparkles } from "lucide-react";
 
 import { AccountFields } from "@/components/account-fields";
-import { InviteCodeCard } from "@/components/invite-code-card";
 import { InviteKeyField } from "@/components/invite-key-field";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +26,7 @@ import { getTasks } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
 import { attachAccount } from "@/lib/supabase/accounts";
 import { generateUniqueInviteCode } from "@/lib/supabase/persist";
+import { todayIsoDate } from "@/lib/utils";
 
 export default function CreateGroupPage() {
   const { state, ready, updateAsync } = useAppStore();
@@ -36,6 +36,7 @@ export default function CreateGroupPage() {
   const [name, setName] = useState(defaultGroupDraft.name);
   const [description, setDescription] = useState(defaultGroupDraft.description);
   const [duration, setDuration] = useState(String(defaultGroupDraft.duration));
+  const [startDate, setStartDate] = useState(todayIsoDate());
   const [curatorName, setCuratorName] = useState("");
   const [inviteCode, setInviteCode] = useState(generateInviteCode);
   const [login, setLogin] = useState("");
@@ -85,6 +86,7 @@ export default function CreateGroupPage() {
           name,
           description,
           duration: Number(duration) || defaultGroupDraft.duration,
+          programStartDate: startDate,
           inviteCode,
           curatorName: cleanedName,
         }),
@@ -124,7 +126,7 @@ export default function CreateGroupPage() {
           </span>
           <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Комната создана</h1>
           <p className="mt-2.5 text-[15px] text-muted">
-            Осталось передать код участникам — программа уже готова.
+            Код приглашения можно скопировать в настройках и передать участникам.
           </p>
         </div>
 
@@ -138,10 +140,9 @@ export default function CreateGroupPage() {
             <p className="mt-2 text-[15px] leading-relaxed text-muted">{state.group.description}</p>
             <p className="mt-4 text-[13px] text-subtle">
               Длительность программы — {state.group.duration} дней
+              {state.group.programStartDate ? `. Старт: ${state.group.programStartDate}` : ""}
             </p>
           </Card>
-
-          <InviteCodeCard code={state.group.inviteCode} />
 
           <Card className="p-5 sm:p-6">
             <CardHeader
@@ -154,7 +155,7 @@ export default function CreateGroupPage() {
               {tasks.length === 0 ? (
                 <EmptyState
                   title="Заданий пока нет"
-                  description="Добавьте первое задание в панели куратора."
+                  description="Добавьте первое задание в панели наставника."
                 />
               ) : (
                 tasks.map((task) => (
@@ -173,7 +174,7 @@ export default function CreateGroupPage() {
           </Card>
 
           <Button size="lg" fullWidth onClick={openCuratorPanel}>
-            Перейти в панель куратора
+            Перейти в панель наставника
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -230,6 +231,20 @@ export default function CreateGroupPage() {
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Для кого эта группа и что в ней происходит."
               maxLength={240}
+            />
+          </Field>
+
+          <Field
+            label="Дата старта"
+            htmlFor="group-start"
+            hint="День 1 программы. От неё считаются недели и календарь."
+          >
+            <Input
+              id="group-start"
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="max-w-52"
             />
           </Field>
 

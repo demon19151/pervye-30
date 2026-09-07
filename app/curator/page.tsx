@@ -11,20 +11,18 @@ import {
 } from "lucide-react";
 
 import { CreateTaskModal } from "@/components/create-task-modal";
-import { InviteCodeCard } from "@/components/invite-code-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ParticipantTable } from "@/components/participant-table";
 import { StatCard } from "@/components/stat-card";
 import { SupportAlert } from "@/components/support-alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { getAllParticipantStats, getGroupStats } from "@/lib/services/statsService";
 import { addTask, getCurrentWeek, type CreateTaskInput } from "@/lib/services/taskService";
-import { useAppStore } from "@/lib/store/app-store";
-import type { ParticipantStats } from "@/lib/types";
+import { resolveAttentionForUser } from "@/lib/services/supportService";
 import { toDative } from "@/lib/utils";
+import { useAppStore } from "@/lib/store/app-store";
 
 export default function CuratorPage() {
   return (
@@ -64,7 +62,7 @@ function CuratorOverview() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Панель куратора"
+        title="Панель наставника"
         subtitle={state.group.name}
         action={
           <div className="flex flex-wrap gap-2">
@@ -104,24 +102,13 @@ function CuratorOverview() {
         />
       </div>
 
-      <SupportAlert flagged={flagged} />
-
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold sm:text-lg">Вопросы участников</h2>
-            <p className="mt-1 text-sm text-muted">
-              Личные сообщения из вкладки «Задать вопрос».
-            </p>
-          </div>
-          <Link
-            href="/curator/questions"
-            className="text-[13px] font-medium text-accent hover:text-accent-strong"
-          >
-            Открыть переписку
-          </Link>
-        </div>
-      </Card>
+      <SupportAlert
+        flagged={flagged}
+        onResolve={(stats) => {
+          update((current) => resolveAttentionForUser(current, stats.user.id));
+          toast(`Требование поддержки снято с ${toDative(stats.user.name)}.`);
+        }}
+      />
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
@@ -139,12 +126,6 @@ function CuratorOverview() {
           duration={state.group.duration}
         />
       </section>
-
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="space-y-5 lg:col-span-5">
-          <InviteCodeCard code={state.group.inviteCode} />
-        </div>
-      </div>
 
       <CreateTaskModal
         open={taskOpen}

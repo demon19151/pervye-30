@@ -40,6 +40,8 @@ describe("accountService", () => {
   it("accountErrorMessage переводит коды базы", () => {
     expect(accountErrorMessage(new Error("LOGIN_TAKEN"))).toBe("Такой логин уже занят.");
     expect(accountErrorMessage(new Error("GROUP_NOT_FOUND"))).toBe("Код группы не найден.");
+    expect(accountErrorMessage(new Error("ENROLLMENT_CLOSED"))).toBe("Набор в эту группу закрыт.");
+    expect(accountErrorMessage(new Error("PASSWORD_WRONG"))).toBe("Текущий пароль неверный.");
     expect(accountErrorMessage({ message: "GROUP_NOT_FOUND" })).toBe("Код группы не найден.");
     expect(accountErrorMessage({ foo: 1 })).toBe("Не удалось создать аккаунт. Проверьте код группы и логин.");
   });

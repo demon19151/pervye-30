@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ListChecks, Plus, Trash2 } from "lucide-react";
 
-import { KindPicker } from "@/components/create-task-modal";
+import { KindPicker, AnswerOptionsEditor } from "@/components/create-task-modal";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +14,19 @@ import { EmptyState } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import {
   addTask,
+  defaultAnswerOptions,
   getCurrentWeek,
+  getTaskAnswerOptions,
   getTasks,
   getWeekBounds,
   getTaskKind,
   getWeekCount,
+  isAnswerTask,
   removeTask,
   TASK_KIND_LABELS,
 } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
-import type { TaskKind } from "@/lib/types";
+import type { TaskAnswerOption, TaskKind } from "@/lib/types";
 import { cn, formatWeekRange } from "@/lib/utils";
 
 export default function CuratorTasksPage() {
@@ -42,6 +45,9 @@ function CuratorTasks() {
   const [kind, setKind] = useState<TaskKind>("required");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [answerOptions, setAnswerOptions] = useState<TaskAnswerOption[]>(() =>
+    defaultAnswerOptions("question"),
+  );
   const [error, setError] = useState<string | null>(null);
 
   if (!state) return null;
@@ -51,6 +57,15 @@ function CuratorTasks() {
   const currentWeek = getCurrentWeek(state);
   const effectiveWeek = week === "" ? String(currentWeek) : week;
 
+  const isAnswerKind = kind === "question";
+
+  const handleKindChange = (next: TaskKind) => {
+    setKind(next);
+    if (next === "question") {
+      setAnswerOptions(defaultAnswerOptions(next));
+    }
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -59,6 +74,7 @@ function CuratorTasks() {
       title,
       description,
       kind,
+      answerOptions: isAnswerKind ? answerOptions : undefined,
     });
 
     if ("error" in result) {
@@ -72,6 +88,7 @@ function CuratorTasks() {
     setKind("required");
     setTitle("");
     setDescription("");
+    setAnswerOptions(defaultAnswerOptions("question"));
     toast(`Задание на неделю ${result.task.week} добавлено`);
   };
 
@@ -92,7 +109,7 @@ function CuratorTasks() {
           <CardHeader
             icon={<Plus className="size-5" />}
             title="Новое задание"
-            description="Привяжите шаг к неделе и выберите тип: обязательно, рекомендуем, вопрос или статус."
+            description="Привяжите шаг к неделе и выберите тип: обязательно, рекомендуем или вопрос."
           />
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -109,7 +126,7 @@ function CuratorTasks() {
             </Field>
 
             <Field label="Тип">
-              <KindPicker value={kind} onChange={setKind} />
+              <KindPicker value={kind} onChange={handleKindChange} />
             </Field>
 
             <Field label="Название" htmlFor="task-title">
@@ -117,7 +134,7 @@ function CuratorTasks() {
                 id="task-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Например: познакомиться с куратором"
+                placeholder="Например: познакомиться с наставником"
                 maxLength={120}
               />
             </Field>
@@ -131,6 +148,10 @@ function CuratorTasks() {
                 maxLength={400}
               />
             </Field>
+
+            {isAnswerKind ? (
+              <AnswerOptionsEditor value={answerOptions} onChange={setAnswerOptions} />
+            ) : null}
 
             <Button type="submit" fullWidth disabled={title.trim().length < 3}>
               Добавить задание
@@ -196,16 +217,28 @@ function CuratorTasks() {
                               {task.week}
                             </span>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 overflow-hidden">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="font-semibold">{task.title}</h3>
+                                <h3 className="font-semibold break-all [overflow-wrap:anywhere]">{task.title}</h3>
                                 <Badge tone="neutral">{TASK_KIND_LABELS[getTaskKind(task)]}</Badge>
                               </div>
                               {task.description && (
-                                <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                                <p className="mt-1.5 text-sm leading-relaxed break-all text-muted [overflow-wrap:anywhere]">
                                   {task.description}
                                 </p>
                               )}
+                              {isAnswerTask(task) ? (
+                                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                  {getTaskAnswerOptions(task).map((option) => (
+                                    <Badge
+                                      key={option.id}
+                                      tone={option.needsAttention ? "warning" : "neutral"}
+                                    >
+                                      {option.label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
 
                             <button

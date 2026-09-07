@@ -38,7 +38,7 @@ export function MessageCard({
             <span className="text-sm font-semibold">{author?.name ?? "Участник"}</span>
             {author?.role === "curator" && (
               <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-accent-strong uppercase">
-                куратор
+                наставник
               </span>
             )}
             {isMine && <span className="text-[11px] text-subtle">это ты</span>}

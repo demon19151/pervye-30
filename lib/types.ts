@@ -27,6 +27,10 @@ export type Group = {
   currentDay: number;
   /** Календарная дата дня 1, YYYY-MM-DD. День 1 = 28 августа после приказа о группах. */
   programStartDate?: string;
+  /** false — по ключу больше нельзя войти. По умолчанию набор открыт. */
+  enrollmentOpen?: boolean;
+  /** Когда наставник завершил программу. Комната остаётся, новые люди не входят. */
+  archivedAt?: string;
   curatorId: string;
   weeklyGoal?: WeeklyGoal;
 };
@@ -37,10 +41,17 @@ export type WeeklyGoal = {
   done: number;
 };
 
-export type TaskKind = "required" | "recommended" | "question" | "status";
+export type TaskKind = "required" | "recommended" | "question";
 
-/** Ответ на вопрос (да/нет) или выбор статуса. */
-export type TaskAnswer = "yes" | "no" | "clear" | "question" | "help";
+/** Значение ответа: стандартное (yes/no/…) или id кнопки, которую задал куратор. */
+export type TaskAnswer = string;
+
+export type TaskAnswerOption = {
+  id: string;
+  label: string;
+  /** Этот вариант подсвечивается куратору как сигнал. */
+  needsAttention?: boolean;
+};
 
 export type Task = {
   id: string;
@@ -50,6 +61,8 @@ export type Task = {
   kind: TaskKind;
   title: string;
   description: string;
+  /** Кнопки ответа для вопроса. Если нет — стандартные. */
+  answerOptions?: TaskAnswerOption[];
 };
 
 /** Отметка, что участник закрыл конкретное недельное задание. */
@@ -59,6 +72,8 @@ export type TaskCompletion = {
   userId: string;
   createdAt: string;
   answer?: TaskAnswer;
+  /** Свободный комментарий к шагу-вопросу — его видит наставник. */
+  answerNote?: string;
 };
 
 export type Message = {
@@ -140,6 +155,15 @@ export type Achievement = {
   unlocked: boolean;
 };
 
+export type SummaryReflection = {
+  id: string;
+  userId: string;
+  mentorNote: string;
+  useful: string;
+  unclear: string;
+  updatedAt: string;
+};
+
 /** Единый снимок состояния приложения — собирается из таблиц Supabase. */
 export type AppState = {
   version: number;
@@ -154,6 +178,7 @@ export type AppState = {
   calendarEvents: CalendarEvent[];
   calendarEventViews: CalendarEventView[];
   calendarEventResponses: CalendarEventResponse[];
+  summaryReflections: SummaryReflection[];
   /** Кто сейчас в системе. null — не авторизован. */
   session: Session | null;
 };
@@ -193,7 +218,6 @@ export type SummaryReport = {
   completedTasks: number;
   closedWeeks: number;
   achievements: Achievement[];
-  curatorNote: string;
-  /** true, если программа ещё не завершена и показывается предпросмотр. */
+  /** true, если программа ещё не завершена. */
   preview: boolean;
 };

@@ -2,10 +2,13 @@ import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
-  CalendarCheck,
+  Bot,
+  CalendarDays,
   ClipboardList,
   HeartHandshake,
-  MessagesSquare,
+  KeyRound,
+  ListChecks,
+  MessageCircleQuestion,
   Sparkles,
   TrendingUp,
   Users,
@@ -19,34 +22,77 @@ import { DEMO_INVITE_CODE } from "@/lib/mockData";
 
 const steps = [
   {
-    icon: ClipboardList,
-    title: "Получи задание",
-    text: "Шаги на неделю, а не на каждый день. Закрой, когда получится.",
+    icon: KeyRound,
+    title: "Собери группу",
+    text: "Наставник создаёт комнату и выдаёт код. Участник входит по коду, логину и паролю.",
   },
   {
-    icon: CalendarCheck,
-    title: "Отметь свой день",
-    text: "Выполни задание и расскажи, как ты себя чувствуешь.",
+    icon: ClipboardList,
+    title: "Закрывай шаги недели",
+    text: "Обязательные, рекомендуемые и короткие вопросы с кнопками ответа — без ежедневной галочки «настроение».",
+  },
+  {
+    icon: MessageCircleQuestion,
+    title: "Спроси, если застрял",
+    text: "ИИ-помощник отвечает по базе знаний университета. Наставнику можно написать лично — группа это не увидит.",
+  },
+];
+
+const nowOnSite = [
+  {
+    icon: ClipboardList,
+    title: "Недельные задания",
+    text: "Шаги на неделю: закрыть, ответить кнопкой или отметить, что нужна помощь.",
+  },
+  {
+    icon: Bot,
+    title: "ИИ-помощник",
+    text: "Во вкладке «Задать вопрос» отвечает про учёбу по локальной базе знаний.",
+  },
+  {
+    icon: MessageCircleQuestion,
+    title: "Личные сообщения",
+    text: "Студент пишет наставнику напрямую. Наставник видит переписку во «Вопросах».",
+  },
+  {
+    icon: CalendarDays,
+    title: "Календарь мероприятий",
+    text: "Наставник добавляет встречи. Участник отмечает, пойдёт ли.",
+  },
+  {
+    icon: BellRing,
+    title: "Сигнал помощи",
+    text: "В обзоре наставника — блок «Требуют внимания», если кто-то просрочил шаг или попросил помощь.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Прогресс и итоги",
+    text: "День программы, выполненные шаги, просрочки, достижения за первый месяц.",
   },
   {
     icon: Users,
-    title: "Будь не один",
-    text: "Общайся с группой и получай поддержку куратора.",
+    title: "Группа и участники",
+    text: "Состав комнаты, цель недели, прогресс каждого. Код приглашения — в профиле и настройках.",
+  },
+  {
+    icon: ListChecks,
+    title: "Панель наставника",
+    text: "Обзор, задания с кнопками ответа, мероприятия, настройки комнаты и новый ключ.",
   },
 ];
 
 const participantBenefits = [
-  { icon: ClipboardList, text: "Понятный план на весь первый месяц" },
-  { icon: Sparkles, text: "Маленькие шаги вместо больших задач" },
-  { icon: MessagesSquare, text: "Поддержка группы, которая проходит то же самое" },
-  { icon: TrendingUp, text: "Видимый прогресс — заметно, что двигаешься" },
+  { icon: ClipboardList, text: "План на первый месяц: шаги недели, а не ежедневный чек-ин" },
+  { icon: Bot, text: "ИИ-помощник по учёбе и университету" },
+  { icon: MessageCircleQuestion, text: "Личный чат с наставником, без общей ленты" },
+  { icon: CalendarDays, text: "Календарь встреч и отметка «пойду»" },
 ];
 
 const curatorBenefits = [
-  { icon: TrendingUp, text: "Контроль прогресса каждого участника" },
-  { icon: BellRing, text: "Ненавязчивые сигналы о пропусках" },
-  { icon: Users, text: "Вся группа в одном месте" },
-  { icon: MessagesSquare, text: "Простая коммуникация без лишних инструментов" },
+  { icon: BellRing, text: "Сигнал, что кому-то нужна помощь" },
+  { icon: ListChecks, text: "Задания с кнопками ответа и пометкой «сигнал»" },
+  { icon: Users, text: "Прогресс каждого участника в одном месте" },
+  { icon: CalendarDays, text: "Календарь группы: добавить встречу и увидеть отклики" },
 ];
 
 export default function LandingPage() {
@@ -74,7 +120,6 @@ export default function LandingPage() {
       </header>
 
       <main>
-        {/* Hero */}
         <section className="hero-glow">
           <div className="mx-auto max-w-6xl px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-24 lg:px-8">
             <div className="max-w-2xl">
@@ -90,8 +135,8 @@ export default function LandingPage() {
                 Не проходи первый месяц в одиночку.
               </p>
               <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted">
-                Конкретные шаги на первый месяц, поддержка группы и куратор рядом. Не каждый день
-                нужен шаг — только то, что нельзя пропустить.
+                Комната на 30 дней: недельные шаги, календарь, ИИ-помощник по учёбе и наставник
+                рядом. Наставник создаёт группу, участники входят по коду.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -112,6 +157,7 @@ export default function LandingPage() {
                 <span className="font-mono font-semibold tracking-wider text-accent-strong">
                   {DEMO_INVITE_CODE}
                 </span>
+                {" "}или войдите готовым аккаунтом на странице входа.
               </p>
             </div>
 
@@ -119,13 +165,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Как это устроено */}
         <section className="border-t border-line/70 bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <div className="max-w-xl">
               <h2 className="text-3xl font-semibold sm:text-4xl">Как это устроено</h2>
               <p className="mt-3 text-[17px] text-muted">
-                Три простых действия — и первый месяц перестаёт быть испытанием в одиночку.
+                Одна комната, две роли: участник и наставник.
               </p>
             </div>
 
@@ -150,21 +195,46 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Преимущества */}
         <section>
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl font-semibold sm:text-4xl">Что есть на сайте сейчас</h2>
+              <p className="mt-3 text-[17px] text-muted">
+                Это не черновик идеи, а рабочий набор разделов. Ниже — то, чем можно пользоваться
+                уже сегодня.
+              </p>
+            </div>
+
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {nowOnSite.map((item) => (
+                <li key={item.title}>
+                  <Card className="h-full p-5">
+                    <span className="flex size-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong">
+                      <item.icon className="size-5" />
+                    </span>
+                    <h3 className="mt-4 text-base font-semibold">{item.title}</h3>
+                    <p className="mt-2 text-[14px] leading-relaxed text-muted">{item.text}</p>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="border-t border-line/70 bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <h2 className="text-3xl font-semibold sm:text-4xl">Что получают обе стороны</h2>
 
             <div className="mt-10 grid gap-5 lg:grid-cols-2">
               <BenefitCard
                 title="Для участника"
-                subtitle="Спокойный вход в новое, без ощущения, что ты один."
+                subtitle="Сегодня, вопрос наставнику или ИИ, группа, мероприятия, прогресс и профиль."
                 items={participantBenefits}
                 tone="accent"
               />
               <BenefitCard
-                title="Для куратора"
-                subtitle="Видно, как идут дела, и когда стоит написать первым."
+                title="Для наставника"
+                subtitle="Обзор, участники, вопросы, задания, мероприятия и настройки комнаты."
                 items={curatorBenefits}
                 tone="success"
               />
@@ -172,8 +242,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="border-t border-line/70 bg-surface">
+        <section>
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <Card tone="accent" className="p-8 text-center sm:p-14">
               <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-surface text-accent">
@@ -181,7 +250,7 @@ export default function LandingPage() {
               </span>
               <h2 className="mt-6 text-3xl font-semibold sm:text-4xl">Начать первые 30 дней</h2>
               <p className="mx-auto mt-3 max-w-md text-[17px] text-muted">
-                Создайте группу за минуту или присоединитесь к существующей по коду приглашения.
+                Создайте комнату как наставник или войдите в существующую по коду приглашения.
               </p>
 
               <div className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
@@ -205,7 +274,7 @@ export default function LandingPage() {
       <footer className="border-t border-line/70 bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-[13px] text-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <Brand />
-          <p>Демонстрационный MVP. Данные хранятся локально в браузере.</p>
+          <p>Группы и аккаунты хранятся на сервере. Код приглашения — в профиле и в настройках.</p>
         </div>
       </footer>
     </div>
@@ -247,18 +316,18 @@ function BenefitCard({
   );
 }
 
-/** Статичный превью-снимок интерфейса участника — задаёт тон всему лендингу. */
+/** Статичный превью-снимок интерфейса — без функций, которых в приложении уже нет. */
 function HeroPreview() {
   return (
     <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Card className="p-5 sm:p-6">
         <div className="flex items-center justify-between">
-          <Badge tone="accent">Задание дня</Badge>
-          <span className="text-[13px] text-subtle">Неделя 1 · 28 августа — 3 сентября</span>
+          <Badge tone="accent">Шаг недели</Badge>
+          <span className="text-[13px] text-subtle">Неделя 1</span>
         </div>
-        <h3 className="mt-4 text-lg font-semibold">Познакомиться с куратором</h3>
+        <h3 className="mt-4 text-lg font-semibold">Познакомиться с наставником</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Сделано, когда понимаешь, к кому обращаться, и знаешь, как написать куратору.
+          Сделано, когда понимаешь, к кому обращаться, и знаешь, как написать наставнику.
         </p>
         <div className="mt-5 h-11 flex items-center justify-center rounded-2xl bg-success-soft text-sm font-medium text-success-strong ring-1 ring-inset ring-success/25">
           Выполнено ✓
@@ -266,30 +335,26 @@ function HeroPreview() {
       </Card>
 
       <Card className="p-5 sm:p-6">
-        <p className="text-sm font-semibold">Как прошёл твой день?</p>
-        <div className="mt-4 grid grid-cols-5 gap-1.5">
-          {["😞", "🙁", "😐", "🙂", "😄"].map((emoji, index) => (
-            <div
-              key={emoji}
-              className={`grid h-12 place-items-center rounded-xl text-xl ${
-                index === 3
-                  ? "bg-accent-soft ring-2 ring-inset ring-accent"
-                  : "bg-surface-muted ring-1 ring-inset ring-line"
-              }`}
-            >
-              {emoji}
+        <p className="text-sm font-semibold">Задать вопрос</p>
+        <div className="mt-4 space-y-2.5">
+          <div className="flex items-center gap-3 rounded-2xl bg-accent-soft/80 px-3 py-3 ring-1 ring-inset ring-accent/25">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-accent">
+              <Bot className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">ИИ-помощник</p>
+              <p className="text-[12px] text-muted">По базе знаний университета</p>
             </div>
-          ))}
-        </div>
-        <p className="mt-4 text-sm font-semibold">Энергия</p>
-        <div className="mt-3 flex items-end gap-1.5">
-          {[10, 16, 22, 28, 34].map((height, index) => (
-            <div
-              key={height}
-              className={`flex-1 rounded-full ${index === 3 ? "bg-accent" : "bg-accent-ring"}`}
-              style={{ height }}
-            />
-          ))}
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-surface-muted px-3 py-3 ring-1 ring-inset ring-line">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-accent">
+              <Users className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Наставник</p>
+              <p className="text-[12px] text-muted">Лично, группа не увидит</p>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -301,8 +366,8 @@ function HeroPreview() {
           <p className="text-sm font-semibold">Требуют внимания</p>
         </div>
         <p className="mt-4 text-sm text-muted">
-          Сейчас никому не нужна дополнительная поддержка. Сигнал появится по просроченным заданиям
-          или если участник отметит в шаге, что нужна помощь.
+          Сигнал, что кому-то нужна помощь: по просроченным шагам или если участник так ответил в
+          задании.
         </p>
       </Card>
     </div>

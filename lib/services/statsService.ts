@@ -3,6 +3,8 @@ import type {
   AppState,
   ParticipantStats,
   ParticipantStatus,
+  Task,
+  TaskAnswer,
   User,
   Warning,
 } from "../types";
@@ -10,11 +12,15 @@ import { getParticipantDay, getParticipants } from "./groupService";
 import { getActiveSignals, getSignalsForUser } from "./supportService";
 import {
   getCompletedTaskCount,
+  getCurrentWeek,
   getProgramWeek,
+  getTaskCompletion,
   getTasksByWeek,
+  getWeekAnswerTasks,
   getWeekCount,
   hasCompletedTask,
   isRequiredTask,
+  needsCuratorAttention,
 } from "./taskService";
 
 /**
@@ -152,11 +158,232 @@ export function getGroupStats(state: AppState): GroupStats {
   };
 }
 
+/** Сколько обязательных шагов текущей недели закрыли участники. */
+export function getWeekGoalProgress(
+  state: AppState,
+  week = getCurrentWeek(state),
+): { week: number; done: number; target: number } {
+  const tracking = getWeekRequiredStepTracking(state, week);
+  const done = tracking.reduce((sum, item) => sum + item.doneCount, 0);
+  const target = tracking.reduce((sum, item) => sum + item.doneCount + item.pendingCount, 0);
+
+  return { week, done, target };
+}
+
 export const statusLabels: Record<ParticipantStatus, string> = {
   active: "Активен",
   missed: "Есть пропуск",
   needs_support: "Нужна поддержка",
 };
+
+function compareStepResponses<T extends { user: User; completed: boolean; answer?: TaskAnswer }>(
+  left: T,
+  right: T,
+  task: Task,
+): number {
+  const rank = (item: T) => {
+    if (item.completed && needsCuratorAttention(item.answer, task)) return 0;
+    if (!item.completed) return 1;
+    return 2;
+  };
+
+  const diff = rank(left) - rank(right);
+  if (diff !== 0) return diff;
+  return left.user.name.localeCompare(right.user.name, "ru");
+}
+
+export type ParticipantStepAnswer = {
+  user: User;
+  answer?: TaskAnswer;
+  note?: string;
+  completed: boolean;
+  completedAt?: string;
+};
+
+export type WeekStepAnswerTracking = {
+  task: Task;
+  responses: ParticipantStepAnswer[];
+  answeredCount: number;
+  pendingCount: number;
+  attentionCount: number;
+};
+
+export type WeekRequiredStepTracking = {
+  task: Task;
+  responses: Array<{ user: User; completed: boolean; completedAt?: string }>;
+  doneCount: number;
+  pendingCount: number;
+};
+
+export type WeekTrackingSummary = {
+  unansweredCount: number;
+  attentionCount: number;
+  requiredOpenCount: number;
+};
+
+export type SilentStepParticipant = {
+  user: User;
+  weeks: number;
+};
+
+/** Вопросы и статусы из «Шаги этой недели»: кто ответил и какой вариант выбрал. */
+export function getWeekStepAnswerTracking(
+  state: AppState,
+  week = getCurrentWeek(state),
+): WeekStepAnswerTracking[] {
+  const participants = getParticipants(state);
+
+  return getWeekAnswerTasks(state, week).map((task) => {
+    const responses = participants
+      .map((user) => {
+        const completion = getTaskCompletion(state, task.id, user.id);
+        return {
+          user,
+          answer: completion?.answer,
+          note: completion?.answerNote,
+          completed: Boolean(completion),
+          completedAt: completion?.createdAt,
+        };
+      })
+      .sort((left, right) => compareStepResponses(left, right, task));
+    const answeredCount = responses.filter((item) => item.completed).length;
+
+    return {
+      task,
+      responses,
+      answeredCount,
+      pendingCount: participants.length - answeredCount,
+      attentionCount: responses.filter((item) => needsCuratorAttention(item.answer, task)).length,
+    };
+  });
+}
+
+export function getWeekRequiredStepTracking(
+  state: AppState,
+  week = getCurrentWeek(state),
+): WeekRequiredStepTracking[] {
+  const participants = getParticipants(state);
+  const tasks = getTasksByWeek(state, week).filter(isRequiredTask);
+
+  return tasks.map((task) => {
+    const responses = participants
+      .map((user) => {
+        const completion = getTaskCompletion(state, task.id, user.id);
+        return {
+          user,
+          completed: Boolean(completion),
+          completedAt: completion?.createdAt,
+        };
+      })
+      .sort((left, right) => {
+        if (left.completed !== right.completed) return left.completed ? 1 : -1;
+        return left.user.name.localeCompare(right.user.name, "ru");
+      });
+
+    const doneCount = responses.filter((item) => item.completed).length;
+    return {
+      task,
+      responses,
+      doneCount,
+      pendingCount: participants.length - doneCount,
+    };
+  });
+}
+
+export function summarizeWeekTracking(
+  answers: WeekStepAnswerTracking[],
+  required: WeekRequiredStepTracking[],
+): WeekTrackingSummary {
+  const unanswered = new Set<string>();
+  const attention = new Set<string>();
+  const requiredOpen = new Set<string>();
+
+  for (const item of answers) {
+    for (const response of item.responses) {
+      if (!response.completed) unanswered.add(response.user.id);
+      if (response.completed && needsCuratorAttention(response.answer, item.task)) {
+        attention.add(response.user.id);
+      }
+    }
+  }
+
+  for (const item of required) {
+    for (const response of item.responses) {
+      if (!response.completed) requiredOpen.add(response.user.id);
+    }
+  }
+
+  return {
+    unansweredCount: unanswered.size,
+    attentionCount: attention.size,
+    requiredOpenCount: requiredOpen.size,
+  };
+}
+
+export function countSilentAnswerWeeks(
+  state: AppState,
+  userId: string,
+  throughWeek = getCurrentWeek(state),
+): number {
+  let streak = 0;
+
+  for (let week = throughWeek; week >= 1; week -= 1) {
+    const tasks = getWeekAnswerTasks(state, week);
+    if (tasks.length === 0) continue;
+    const answeredAny = tasks.some((task) => hasCompletedTask(state, task.id, userId));
+    if (answeredAny) break;
+    streak += 1;
+  }
+
+  return streak;
+}
+
+export function getSilentStepParticipants(
+  state: AppState,
+  throughWeek = getCurrentWeek(state),
+  minWeeks = 2,
+): SilentStepParticipant[] {
+  return getParticipants(state)
+    .map((user) => ({
+      user,
+      weeks: countSilentAnswerWeeks(state, user.id, throughWeek),
+    }))
+    .filter((item) => item.weeks >= minWeeks)
+    .sort((left, right) => right.weeks - left.weeks || left.user.name.localeCompare(right.user.name, "ru"));
+}
+
+export function getParticipantWeekStepAnswers(
+  state: AppState,
+  userId: string,
+  week = getCurrentWeek(state),
+): Array<{
+  task: Task;
+  answer?: TaskAnswer;
+  note?: string;
+  completed: boolean;
+  completedAt?: string;
+}> {
+  return getWeekAnswerTasks(state, week).map((task) => {
+    const completion = getTaskCompletion(state, task.id, userId);
+    return {
+      task,
+      answer: completion?.answer,
+      note: completion?.answerNote,
+      completed: Boolean(completion),
+      completedAt: completion?.createdAt,
+    };
+  });
+}
+
+export function getParticipantWeekRequiredProgress(
+  state: AppState,
+  userId: string,
+  week = getCurrentWeek(state),
+): { done: number; total: number } {
+  const tasks = getTasksByWeek(state, week).filter(isRequiredTask);
+  const done = tasks.filter((task) => hasCompletedTask(state, task.id, userId)).length;
+  return { done, total: tasks.length };
+}
 
 /** Согласование по роду — мелочь, но интерфейс выглядит живее. */
 export function statusLabel(stats: ParticipantStats): string {

@@ -55,7 +55,11 @@ export async function POST(request: Request) {
       .filter((message) => message.role === "user")
       .map((message) => message.content);
 
-    retrieval = await retrieve(buildSearchQuery(question, previousQuestions));
+    retrieval = await retrieve(question);
+    const fused = buildSearchQuery(question, previousQuestions);
+    if (fused !== question && retrieval.confidence < MIN_CONFIDENCE) {
+      retrieval = await retrieve(fused);
+    }
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Не удалось выполнить поиск по базе знаний.",

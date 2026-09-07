@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   // Требуется для оптимизированного Docker-образа: Next.js собирает
   // минимальный автономный сервер в .next/standalone, без node_modules
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/api/bot-chat": ["./knowledge/**/*"],
+  },
 };
 
 export default nextConfig;

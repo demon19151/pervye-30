@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import { createInitialState, DEMO_PARTICIPANT_ID } from "../mockData";
 import { buildSummary } from "./summaryService";
 

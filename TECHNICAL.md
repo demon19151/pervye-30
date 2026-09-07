@@ -159,13 +159,7 @@ Supabase-клиент:
 - `resolveAttentionForUser(...)`:
   - помечает как `resolved` “missed_tasks” и “manual”, чтобы statsService перестал формировать предупреждения
 
-### 5.5. Лента группы и реакции: `lib/services/messageService.ts`
-
-- `getMessages(state)` — сообщения группы, отсортированные по времени
-- `addMessage(state,userId,text)` — добавляет сообщение и реакционный счётчик
-- `toggleReaction(...)` — идемпотентное изменение реакции пользователя
-
-### 5.6. Личные переписки: `lib/services/directMessageService.ts`
+### 5.5. Личные переписки: `lib/services/directMessageService.ts`
 
 - тред двух пользователей: `getThread(state,userA,userB)`
 - новые сообщения: `addDirectMessage(...)`
@@ -173,17 +167,13 @@ Supabase-клиент:
   - `getUnreadCuratorReplies(...)`
   - `getWaitingStudentCount(...)`
 
-### 5.7. Мероприятия: `lib/services/calendarEventsService.ts`
+### 5.6. Мероприятия: `lib/services/calendarEventsService.ts`
 
 - `upsertCalendarEvent(...)` — добавление/обновление события
 - `respondToCalendarEvent(...)` — отметка “ответил”
 - `getUpcomingCalendarEvent(...)` / `getUnseenCalendarEventCount(...)`
 
-### 5.8. Объявления: `lib/services/announcementService.ts`
-
-`addAnnouncement(...)` сохраняет запись в `announcements`, и одновременно добавляет сообщение в “ленту” через `messageService`.
-
-### 5.9. Итоги: `lib/services/summaryService.ts`
+### 5.7. Итоги: `lib/services/summaryService.ts`
 
 `buildSummary(state,userId)` строит итоговый отчёт:
 

@@ -33,17 +33,6 @@ export default function EventsPage() {
   );
 }
 
-/*
-  VK-лента мероприятий временно отключена — вместо неё календарь программы.
-  Код ниже оставляем, чтобы потом вернуть загрузку из сообществ.
-
-  function EventsFeed() {
-    const [data, setData] = useState(null);
-    useEffect(() => { void fetch("/api/vk-events"); }, []);
-    return ... VkEventCard ...
-  }
-*/
-
 function EventsCalendar() {
   const { state, currentUser, update } = useAppStore();
   const toast = useToast();

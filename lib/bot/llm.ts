@@ -40,7 +40,7 @@ export type StreamChatOptions = {
 
 /** Стримит текст ответа (OpenAI-compatible SSE chat completions). */
 export async function* streamChat(options: StreamChatOptions): AsyncGenerator<string> {
-  const { messages, config, temperature = 0.2, maxTokens = 900, signal } = options;
+  const { messages, config, temperature = 0.3, maxTokens = 1200, signal } = options;
 
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",

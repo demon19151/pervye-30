@@ -5,9 +5,20 @@ build
 .DS_Store
 *.pem
 npm-debug.log*
-.env*.local
+.env*
 next-env.d.ts
 tsconfig.tsbuildinfo
 .vercel
-.env*
-!.env.example
+
+# локальные заметки и редактор — в GitHub не нужны
+AGENTS.md
+AI_AGENT_DOCS.md
+DATABASE.md
+.cursor/
+
+# презентации
+docs/
+*.pptx
+public/architecture-slide.html
+public/stack-slide.html
+public/roadmap-slide.html

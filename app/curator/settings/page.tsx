@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarDays, LogOut, RefreshCw, RotateCcw, Settings, UsersRound } from "lucide-react";
+import { Archive, LogOut, RefreshCw, RotateCcw, Settings, UsersRound } from "lucide-react";
 
 import { DeleteAccountCard } from "@/components/delete-account-card";
 import { InviteCodeCard } from "@/components/invite-code-card";
@@ -25,16 +25,13 @@ import {
   removeParticipant,
   rotateInviteCode,
   setEnrollmentOpen,
-  setProgramWeek,
   signOut,
   switchRole,
   unarchiveGroup,
 } from "@/lib/services/groupService";
-import { getCurrentWeek, getWeekBounds, getWeekCount } from "@/lib/services/taskService";
 import { useAppStore } from "@/lib/store/app-store";
 import { getAccountLogin } from "@/lib/supabase/accounts";
 import { deleteRemoteGroup, fetchState, generateUniqueInviteCode } from "@/lib/supabase/persist";
-import { cn, formatWeekRange, todayIsoDate } from "@/lib/utils";
 
 export default function CuratorSettingsPage() {
   return (
@@ -51,8 +48,6 @@ function CuratorSettings() {
 
   const [name, setName] = useState(state?.group.name ?? "");
   const [description, setDescription] = useState(state?.group.description ?? "");
-  const [duration, setDuration] = useState(String(state?.group.duration ?? 30));
-  const [startDate, setStartDate] = useState(state?.group.programStartDate ?? todayIsoDate());
   const [rotating, setRotating] = useState(false);
   const [login, setLogin] = useState<string | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
@@ -60,17 +55,13 @@ function CuratorSettings() {
   const groupId = state?.group.id;
   const groupName = state?.group.name;
   const groupDescription = state?.group.description;
-  const groupDuration = state?.group.duration;
-  const groupStart = state?.group.programStartDate;
   const userId = currentUser?.id;
 
   useEffect(() => {
     if (!groupName) return;
     setName(groupName);
     setDescription(groupDescription ?? "");
-    setDuration(String(groupDuration ?? 30));
-    setStartDate(groupStart ?? todayIsoDate());
-  }, [groupId, groupName, groupDescription, groupDuration, groupStart]);
+  }, [groupId, groupName, groupDescription]);
 
   useEffect(() => {
     if (!userId) return;
@@ -86,14 +77,6 @@ function CuratorSettings() {
   const enrollmentOpen = isEnrollmentOpen(state.group);
   const participants = state.users.filter((user) => user.role === "participant");
   const removeTarget = participants.find((user) => user.id === removeId);
-  const weekCount = getWeekCount(state.group.duration);
-  const currentWeek = getCurrentWeek(state);
-  const weekBounds = getWeekBounds(currentWeek, state.group.duration);
-  const weekRange = formatWeekRange(
-    state.group.programStartDate,
-    weekBounds.start,
-    weekBounds.end,
-  );
 
   const handleSave = (event: React.FormEvent) => {
     event.preventDefault();
@@ -101,17 +84,9 @@ function CuratorSettings() {
       createGroup(current, {
         name,
         description,
-        duration: Number(duration),
-        programStartDate: startDate,
       }),
     );
     toast("Настройки группы сохранены");
-  };
-
-  const handleWeekChange = (week: number) => {
-    if (week === currentWeek) return;
-    update((current) => setProgramWeek(current, week));
-    toast(`Сейчас неделя ${week}`);
   };
 
   const handleRotateCode = async () => {
@@ -156,7 +131,7 @@ function CuratorSettings() {
             <CardHeader
               icon={<Settings className="size-5" />}
               title="Группа"
-              description="Название, описание и дата старта видят все участники."
+              description="Название и описание видят все участники. Дата старта задаётся при создании комнаты."
             />
 
             <form onSubmit={handleSave} className="mt-5 space-y-4">
@@ -176,39 +151,6 @@ function CuratorSettings() {
                   onChange={(event) => setDescription(event.target.value)}
                   maxLength={240}
                 />
-              </Field>
-
-              <Field
-                label="Дата старта"
-                htmlFor="settings-start"
-                hint="День 1 программы. От неё считаются недели и календарь мероприятий."
-              >
-                <Input
-                  id="settings-start"
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  className="max-w-52"
-                />
-              </Field>
-
-              <Field
-                label="Длительность"
-                htmlFor="settings-duration"
-                hint={`Сейчас идёт день ${state.group.currentDay} — длительность нельзя сделать меньше.`}
-              >
-                <div className="flex items-center gap-3">
-                  <Input
-                    id="settings-duration"
-                    type="number"
-                    min={state.group.currentDay}
-                    max={90}
-                    value={duration}
-                    onChange={(event) => setDuration(event.target.value)}
-                    className="max-w-28"
-                  />
-                  <span className="text-sm text-muted">дней</span>
-                </div>
               </Field>
 
               <Button type="submit" disabled={name.trim().length < 3}>
@@ -304,36 +246,6 @@ function CuratorSettings() {
               </>
             }
           />
-
-          {demo ? (
-            <Card className="p-5 sm:p-6">
-              <CardHeader
-                icon={<CalendarDays className="size-5" />}
-                title="Неделя программы"
-                description={`Сейчас неделя ${currentWeek}: дни ${weekBounds.start}–${weekBounds.end}${
-                  weekRange ? `. ${weekRange}` : ""
-                }`}
-              />
-
-              <div className="mt-5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2">
-                {Array.from({ length: weekCount }, (_, index) => index + 1).map((week) => (
-                  <button
-                    key={week}
-                    type="button"
-                    onClick={() => handleWeekChange(week)}
-                    className={cn(
-                      "rounded-xl px-3 py-2 text-[13px] font-medium transition-colors",
-                      week === currentWeek
-                        ? "bg-accent text-white"
-                        : "bg-surface-muted text-muted ring-1 ring-inset ring-line hover:text-foreground",
-                    )}
-                  >
-                    Неделя {week}
-                  </button>
-                ))}
-              </div>
-            </Card>
-          ) : null}
 
           {demo ? (
             <Card className="p-5 sm:p-6">

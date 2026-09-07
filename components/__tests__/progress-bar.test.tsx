@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import { ProgressBar, ProgressRing } from "./progress-bar";
+import { ProgressBar, ProgressRing } from "../progress-bar";
 
 describe("ProgressBar", () => {
   it("отображает label и hint", () => {

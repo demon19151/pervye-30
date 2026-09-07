@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   title: "Первые 30 — не проходи первый месяц в одиночку",
   description:
     "Комната на первые 30 дней в университете: недельные шаги, календарь, ИИ-помощник по учёбе и наставник рядом. Наставник создаёт группу, участники входят по коду.",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.svg", type: "image/svg+xml", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {

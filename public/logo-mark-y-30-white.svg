@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- 0@:5@ "y" + "30" 2 ?@>?CA:5, 15;K9 (4;O ;>3>1;>:0 =0 0:F5=B=>< D>=5). -->
+  <g stroke="#FFFFFF" stroke-width="38" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M56 60 L128 132" />
+    <path d="M200 60 L128 132" />
+    <path d="M128 132 L128 168" />
+    <path d="M128 190 C126 220 90 226 90 246 C90 260 118 262 128 256 C152 242 172 220 168 190" />
+  </g>
+
+  <text
+    x="128"
+    y="178"
+    text-anchor="middle"
+    font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+    font-size="54"
+    font-weight="900"
+    letter-spacing="-2"
+    fill="#FFFFFF"
+  >30</text>
+</svg>
+

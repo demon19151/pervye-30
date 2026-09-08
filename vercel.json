@@ -1,7 +1,0 @@
-{
-  "services": {
-    "web": {
-      "entrypoint": "Dockerfile.vercel"
-    }
-  }
-}

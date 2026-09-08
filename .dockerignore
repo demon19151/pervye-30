@@ -31,7 +31,7 @@ README.md
 *.md
 
 # --- Docker-файлы (не нужны внутри собственного контекста образа) ---
-Dockerfile
+Dockerfile.vercel
 docker-compose*.yml
 .dockerignore
 

@@ -2,7 +2,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.vercel
     image: pervye-30:latest
     ports:
       - "3000:3000"
@@ -24,6 +24,6 @@ services:
       retries: 3
       start_period: 10s
     # Контейнер не должен работать от root — образ уже переключается на
-    # пользователя nextjs в Dockerfile, но дублируем ограничение на всякий случай.
+    # пользователя nextjs в Dockerfile.vercel, но дублируем ограничение на всякий случай.
     security_opt:
       - no-new-privileges:true
